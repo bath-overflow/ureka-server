@@ -3,12 +3,26 @@ version: '3.8'
 services:
   api:
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
       - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=db
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=mybucket
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8001
+    depends_on:
+      - postgres
+      - minio
+      - chroma
 
   postgres:
     image: postgres:15

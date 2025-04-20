@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile
-from repositories.documnet_store import save_pdf_to_db
+
+from server.repositories.documnet_store import save_pdf_to_db
 
 document_router = APIRouter()
 

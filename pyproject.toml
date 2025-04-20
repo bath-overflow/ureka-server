@@ -6,8 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "asyncpg>=0.30.0",
+    "chromadb>=0.6.3",
     "fastapi>=0.115.12",
-    "pre-commit>=4.2.0",
+    "langchain>=0.3.23",
+    "langchain-chroma>=0.2.3",
     "python-multipart>=0.0.20",
     "uvicorn>=0.34.1",
 ]
@@ -19,3 +21,10 @@ target-version = ["py310"]
 
 [tool.isort]
 profile = "black"
+
+[dependency-groups]
+dev = [
+    "langchain-huggingface>=0.1.2",
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+]

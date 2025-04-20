@@ -6,9 +6,12 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 RUN pip install --no-cache-dir uv==0.6.3 && \
-    uv sync
+    uv sync --no-dev
 
-COPY . .
+COPY ./server .
+
+ENV ENVIRONMENT=production
+ENV PYTHONUNBUFFERED=1
 
 CMD ["uv", "run", "uvicorn", "--host", "0.0.0.0", "--port", "8000", "main:app"]
 
