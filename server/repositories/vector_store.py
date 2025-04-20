@@ -71,13 +71,14 @@ CHROMA_PORT = os.environ.get("CHROMA_PORT", 8001)
 
 
 class ChromaVectorStore(VectorStore):
-    def __init__(self, embedding: Embeddings):
+    def __init__(self, embedding: Embeddings, client=None):
 
-        client: ClientAPI = HttpClient(
-            host=CRHOMA_HOST,
-            port=CHROMA_PORT,
-            ssl=False,
-        )
+        if client is None:
+            client: ClientAPI = HttpClient(
+                host=CRHOMA_HOST,
+                port=CHROMA_PORT,
+                ssl=False,
+            )
 
         self.embedding = embedding
         self.client = client  # from your previous code
