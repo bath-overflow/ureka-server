@@ -8,6 +8,8 @@ from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import InMemoryVectorStore
 
+from server.services.embedding import huggingface_embeddings
+
 
 class VectorStore(ABC):
 
@@ -71,13 +73,14 @@ CHROMA_PORT = os.environ.get("CHROMA_PORT", 8001)
 
 
 class ChromaVectorStore(VectorStore):
-    def __init__(self, embedding: Embeddings):
+    def __init__(self, embedding: Embeddings, client=None):
 
-        client: ClientAPI = HttpClient(
-            host=CRHOMA_HOST,
-            port=CHROMA_PORT,
-            ssl=False,
-        )
+        if client is None:
+            client: ClientAPI = HttpClient(
+                host=CRHOMA_HOST,
+                port=CHROMA_PORT,
+                ssl=False,
+            )
 
         self.embedding = embedding
         self.client = client  # from your previous code
@@ -113,3 +116,8 @@ class ChromaVectorStore(VectorStore):
     def get_document_by_id(self, collection_name, document_id: str) -> Any:
         store = self._get_or_create_store(collection_name)
         return store.get_by_ids([document_id])
+
+
+vector_store = MemoryVectorStore(
+    embedding=huggingface_embeddings,
+)

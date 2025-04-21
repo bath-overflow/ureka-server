@@ -10,6 +10,8 @@ dependencies = [
     "fastapi>=0.115.12",
     "langchain>=0.3.23",
     "langchain-chroma>=0.2.3",
+    "langchain-openai>=0.3.14",
+    "minio>=7.2.15",
     "python-multipart>=0.0.20",
     "uvicorn>=0.34.1",
 ]
