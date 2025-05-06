@@ -1,7 +1,8 @@
 import os
-from io import BytesIO
 from typing import Annotated, Any, Dict, Literal, TypedDict
 
+# from langgraph.checkpoint.memory import InMemorySaver
+import aiosqlite
 from langchain_community.document_loaders import PyPDFLoader  # Keep for BytesIO loading
 from langchain_core.documents import Document
 from langchain_core.messages import (
@@ -13,10 +14,10 @@ from langchain_core.messages import (
 )
 from langchain_core.tools import tool
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import InjectedState, ToolNode
 from pydantic import BaseModel
 
 from server.repositories.vector_store import vector_store
@@ -24,15 +25,11 @@ from server.services.llm import llm
 
 
 # --- PDF Loading and Processing ---
-def load_and_process_pdf(
-    file_content: bytes, collection_name: str, file_name: str = "uploaded.pdf"
-):
+def load_and_process_pdf(collection_name: str, file_name: str = "uploaded.pdf"):
     """Loads PDF from bytes, splits text, creates documents,
     and adds to vector store."""
     print(f"Loading and processing PDF for collection: {collection_name}...")
-    # PyPDFLoader can load from a file-like object
-    pdf_file = BytesIO(file_content)
-    loader = PyPDFLoader(pdf_file)  # Load directly from bytes
+    loader = PyPDFLoader(file_name)
     pages = loader.load()
 
     merged_content = " ".join(page.page_content for page in pages)
@@ -94,10 +91,11 @@ class State(TypedDict):
 
 
 # --- Tool Definition ---
-# Adapt the tool to accept collection_name if needed, or retrieve it from state
 @tool
-def retrieve(query: str, collection_name: str):
-    """Retrieve information related to a query from a specific collection."""
+def retrieve(
+    query: str, collection_name: Annotated[str, InjectedState("collection_name")]
+):
+    """Retrieves relavant documents uploaded by the user based on the query."""
     print(
         f"--- Retrieving documents for query: '{query}' in collection: \
             '{collection_name}' ---"
@@ -105,7 +103,7 @@ def retrieve(query: str, collection_name: str):
     # Use the server's vector_store instance
     retrieved_docs = vector_store.get_documents(
         collection_name=collection_name, query=query
-    )  # Assuming k=3 is default or handled by implementation
+    )
     print(
         f"--- Retrieved {len(retrieved_docs)} documents from collection \
             '{collection_name}' ---"
@@ -147,9 +145,7 @@ def query_or_respond(state: State):
         print("Error: collection_name not found in state for query_or_respond")
         raise ValueError("Collection name not found in state")
 
-    # Bind the tool with the current collection_name
-    bound_retrieve = retrieve.bind(collection_name=collection_name)
-    llm_with_tools = llm.bind_tools([bound_retrieve])  # Use the bound tool
+    llm_with_tools = llm.bind_tools([retrieve])
 
     template = teacher_prompt
     template += f"<query>{state.get('initial_query', 'N/A')}</query>\n"
@@ -173,11 +169,8 @@ def query_or_respond(state: State):
     return {"messages": [response]}
 
 
-# ToolNode needs to know how to get collection_name for the tool call
-# - query_or_respond binds the tool with the collection_name
-tools_node = ToolNode(
-    [retrieve]
-)  # ToolNode executes the bound tool call from the AIMessage
+# ToolNode executes the bound tool call from the AIMessage
+tools_node = ToolNode([retrieve])
 
 
 def generate(state: State):
@@ -327,7 +320,10 @@ graph_builder.add_conditional_edges(
 # Using InMemorySaver, state is lost on server restart.
 # For persistence, replace with a persistent checkpointer
 # (e.g., LangGraph's Redis or Postgres savers)
-memory = InMemorySaver()
+# memory = InMemorySaver()
+
+conn = aiosqlite.connect("socratic_teacher.db", check_same_thread=False)
+memory = AsyncSqliteSaver(conn)
 
 # --- Compile Graph ---
 graph = graph_builder.compile(checkpointer=memory)
