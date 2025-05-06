@@ -77,16 +77,14 @@ def load_prompt(file_name: str) -> str:
 
 
 teacher_prompt = load_prompt("teacher_prompt.txt")
-dean_prompt = load_prompt("dean_prompt.txt")
-initial_query_prompt = load_prompt("genai_query_prompt.txt")
+initial_answer_prompt = load_prompt("genai_query_prompt.txt")
 
 
 # --- State Definition ---
 class State(TypedDict):
-    initial_query: str | None
+    user_query: str | None
     initial_answer: str | None
     messages: Annotated[list[AnyMessage], add_messages]
-    valid: bool | None
     collection_name: str | None
 
 
@@ -115,95 +113,118 @@ def retrieve(
 
 
 # --- Node Definitions ---
-# Nodes need access to collection_name,
-# pass it via state or function arguments if necessary
+def pre_retrieve(state: State):
+    """Given the query, decides whether to retrieve documents or use LLM knowledge."""
+    print("--- Pre-retrieve: Analyzing query ---")
+    user_query = state.get("user_query")
+    if not user_query:
+        print("Error: No user query found in state for pre_retrieve")
+        raise ValueError("User query not found in state")
 
-
-def generate_initial_answer(state: State):
-    """Generates the initial concise answer to the user's query."""
-    initial_query = state.get("initial_query")
-    if not initial_query:
-        print("Error: initial_query not found in state for generate_initial_answer")
-        raise ValueError("Initial query not found in state")
-
-    if state.get("initial_answer") is not None:
-        return state
-
-    print("--- Generating Initial Answer ---")
-    initial_msg_content = initial_query_prompt + f"\n\n{initial_query}"
-    response = llm.invoke([HumanMessage(content=initial_msg_content)])
-    answer = response.content
-    print("--- Initial Answer Generated ---")
-    return {"initial_answer": answer}
-
-
-def query_or_respond(state: State):
-    """Decides whether to retrieve documents or respond directly."""
-    print("--- Teacher: Querying or Responding ---")
     collection_name = state.get("collection_name")
     if not collection_name:
-        print("Error: collection_name not found in state for query_or_respond")
+        print("Error: collection_name not found in state for pre_retrieve")
         raise ValueError("Collection name not found in state")
 
     llm_with_tools = llm.bind_tools([retrieve])
 
-    template = teacher_prompt
-    template += f"<query>{state.get('initial_query', 'N/A')}</query>\n"
-    template += f"<answer>{state.get('initial_answer', 'N/A')}</answer>\n"
+    prompt = (
+        "You are an assistant that decides whether external knowledge is needed to",
+        "answer a question.\n",
+        "Given the following question, decide if you need to search for additional",
+        "context from documents.\n",
+        "If document retrieval is needed, call the retrieve tool with a well-formed",
+        "search query.\n\n",
+        "Question: {user_query}\n\n",
+        "Think carefully - if this is a question about specific information that might",
+        "be in the uploaded documents,",
+        "use the retrieve tool. If it's general knowledge or doesn't require",
+        "specific document content, answer simply 'PASS'.\n",
+    )
 
-    history = ""
-    for message in state.get("messages", []):
-        if isinstance(message, HumanMessage):
-            history += f"[Student]: {message.content}\n"
-        elif isinstance(message, AIMessage) and not message.tool_calls:
-            history += f"[Teacher]: {message.content}\n"
-
-    message_content = template + history + "[Teacher]: "
-
-    response = llm_with_tools.invoke([HumanMessage(message_content)])
-
-    student_part_start_idx = response.content.find("[Student]")
-    if student_part_start_idx != -1:
-        response.content = response.content[:student_part_start_idx].strip()
+    response = llm_with_tools.invoke([HumanMessage(content=prompt)])
 
     return {"messages": [response]}
+
+
+def generate_initial_answer(state: State):
+    """Generates the initial concise answer to the user's query."""
+    user_query = state.get("user_query")
+    if not user_query:
+        print("Error: user_query not found in state for generate_initial_answer")
+        raise ValueError("User query not found in state")
+
+    # Check if there are tool messages (retrieval results)
+    recent_tool_messages = []
+    for message in reversed(state.get("messages", [])):
+        if isinstance(message, ToolMessage):
+            recent_tool_messages.append(message)
+        else:
+            break
+    tool_messages = recent_tool_messages[::-1]
+
+    # Format retrieved documents if any
+    docs_content = ""
+    if tool_messages:
+        docs_content = "\n\n".join(
+            f"Source: {res['metadata'].get('source', 'N/A')}, "
+            f"Split Index: {res['metadata'].get('split_idx', 'N/A')}\n"
+            f"Content: {res['page_content']}\n"
+            for msg in tool_messages
+            for res in (msg.content if isinstance(msg.content, list) else [])
+            if isinstance(res, dict)
+        )
+        docs_content = f"<reference>{docs_content}</reference>\n"
+
+    # Generate initial answer
+    msg_content = initial_answer_prompt + f"\n\n{user_query}\n\n{docs_content}"
+    response = llm.invoke([HumanMessage(content=msg_content)])
+    answer = response.content
+
+    print("--- Initial Answer Generated ---")
+    return {"initial_answer": answer}
 
 
 # ToolNode executes the bound tool call from the AIMessage
 tools_node = ToolNode([retrieve])
 
 
-def generate(state: State):
-    """Generates the final response incorporating retrieved documents."""
+def generate_final_answer(state: State):
+    """Generates the final response using teacher prompt, initial answer,
+    and retrieval results."""
     print("--- Teacher: Generating Response with Context ---")
-    collection_name = state.get(
-        "collection_name"
-    )  # Needed for context if prompts require it
-    if not collection_name:
-        print("Error: collection_name not found in state for generate")
-        raise ValueError("Collection name not found in state")
+    user_query = state.get("user_query")
+    initial_answer = state.get("initial_answer")
+
+    if not user_query or not initial_answer:
+        print("Error: missing user_query or initial_answer in generate_final_answer")
+        raise ValueError("Missing required state elements")
 
     recent_tool_messages = []
     for message in reversed(state.get("messages", [])):
-        if message.type == "tool":
+        if isinstance(message, ToolMessage):
             recent_tool_messages.append(message)
         else:
             break
     tool_messages = recent_tool_messages[::-1]
 
-    docs_content = "\n\n".join(
-        f"Source: {res['metadata'].get('source', 'N/A')}, \
-            Split Index: {res['metadata'].get('split_idx', 'N/A')}\n\
-            Content: {res['page_content']}\n"
-        for msg in tool_messages
-        for res in (msg.content if isinstance(msg.content, list) else [])
-        if isinstance(res, dict)
-    )
-    docs_content = f"<reference>{docs_content}</reference>\n" if docs_content else ""
+    # Format retrieved documents
+    docs_content = ""
+    if tool_messages:
+        docs_content = "\n\n".join(
+            f"Source: {res['metadata'].get('source', 'N/A')}, "
+            f"Split Index: {res['metadata'].get('split_idx', 'N/A')}\n"
+            f"Content: {res['page_content']}\n"
+            for msg in tool_messages
+            for res in (msg.content if isinstance(msg.content, list) else [])
+            if isinstance(res, dict)
+        )
+        docs_content = f"<reference>{docs_content}</reference>\n"
 
     template = teacher_prompt
-    template += f"<query>{state.get('initial_query', 'N/A')}</query>\n"
-    template += f"<answer>{state.get('initial_answer', 'N/A')}</answer>\n"
+    template += f"<query>{state.get('initial_query')}</query>\n"
+    template += f"<answer>{state.get('initial_answer')}</answer>\n"
+    template += docs_content
 
     history = ""
     messages_for_history = [
@@ -212,10 +233,14 @@ def generate(state: State):
     for message in messages_for_history:
         if isinstance(message, HumanMessage):
             history += f"[Student]: {message.content}\n"
-        elif isinstance(message, AIMessage) and not message.tool_calls:
+        elif (
+            isinstance(message, AIMessage)
+            and not message.tool_calls
+            and not message.content.strip().lower() == "pass"
+        ):
             history += f"[Teacher]: {message.content}\n"
 
-    message_content = template + history + docs_content + "[Teacher]: "
+    message_content = template + history + "[Teacher]: "
 
     response = llm.invoke([HumanMessage(message_content)])
 
@@ -226,95 +251,79 @@ def generate(state: State):
     return {"messages": [response]}
 
 
-def validate_output(state: State):
-    """Validates the Teacher's response using the Dean prompt."""
-    print("--- Dean: Validating Teacher's Response ---")
+def cleanup_messages(state: State):
+    """Cleans up the message history by removing tool calls, tool messages,
+    and 'PASS' messages."""
+    print("--- Cleaning up message history ---")
+
     messages = state.get("messages", [])
-    if not messages:
-        print("--- Dean: No messages to validate ---")
-        raise ValueError("No messages to validate")
+    message_to_remove_ids = []
 
-    last_message = messages[-1]
-    # Should not happen
-    if not isinstance(last_message, AIMessage) or last_message.tool_calls:
-        print(
-            "--- Dean: Last message is not a final AI response, skipping validation ---"
-        )
-        raise ValueError("Last message is not a valid AI response")
-
-    template = dean_prompt
-    template += f"[Student]: {state.get('initial_query', 'N/A')}\n"
-
-    history = ""
     for message in messages:
-        if isinstance(message, HumanMessage):
-            history += f"[Student]: {message.content}\n"
-        elif isinstance(message, AIMessage) and not message.tool_calls:
-            history += f"[Teacher]: {message.content}\n"
+        # Remove AI messages with tool calls
+        if isinstance(message, AIMessage) and message.tool_calls:
+            message_to_remove_ids.append(message.id)
 
-    message_content = template + history + "[Dean]: "
+        # Remove Tool Messages
+        elif isinstance(message, ToolMessage):
+            message_to_remove_ids.append(message.id)
 
-    response = llm.invoke([HumanMessage(message_content)])
-    validation_result = response.content.strip().lower() == "true"
-    print(f"--- Dean Validation Result: {validation_result} ---")
+        # Remove AI messages that just say "PASS"
+        elif (
+            isinstance(message, AIMessage) and message.content.strip().lower() == "pass"
+        ):
+            message_to_remove_ids.append(message.id)
 
-    if validation_result:
-        return {"valid": True}
-    else:
-        print("--- Dean Rejected Response, Removing Last Message ---")
-        return {
-            "messages": [RemoveMessage(id=last_message.id)],
-            "valid": False,
-        }
+    # Create RemoveMessage objects for each index to remove
+    remove_messages = [RemoveMessage(id=id) for id in message_to_remove_ids]
 
-
-# --- Graph Definition ---
-graph_builder = StateGraph(State)
-
-graph_builder.add_node("generate_initial_answer", generate_initial_answer)
-graph_builder.add_node("query_or_respond", query_or_respond)
-graph_builder.add_node("tools", tools_node)  # Use the ToolNode instance
-graph_builder.add_node("generate", generate)
-graph_builder.add_node("validate", validate_output)
-
-graph_builder.set_entry_point("generate_initial_answer")
+    return {"messages": remove_messages}
 
 
-def route_after_query(state: State) -> Literal["tools", "validate"]:
+# --- Routing Functions ---
+def route_after_query(state: State) -> Literal["tools", "generate_initial_answer"]:
     messages = state.get("messages", [])
     if not messages:
         print(
             "--- Routing Warning: No messages found in state for route_after_query ---"
         )
-        return "validate"
+        return "generate_initial_answer"
+
     ai_message = messages[-1]
     # Check if the last message is an AIMessage and has tool_calls
     if isinstance(ai_message, AIMessage) and ai_message.tool_calls:
-        print(f"--- Routing: Query -> Tools (Tool calls: {ai_message.tool_calls}) ---")
+        print(
+            "--- Routing: "
+            f"Pre-retrieve -> Tools (Tool calls: {ai_message.tool_calls}) ---"
+        )
         return "tools"
-    print("--- Routing: Query -> Validate ---")
-    return "validate"
+    print("--- Routing: Pre-retrieve -> Generate Initial Answer (No tool calls) ---")
+    return "generate_initial_answer"
 
 
-def route_after_validate(state: State):
-    if state.get("valid", False):
-        print("--- Routing: Validate -> END ---")
-        return END
-    else:
-        print("--- Routing: Validate -> Query (Re-prompting) ---")
-        return "query_or_respond"
+# --- Graph Definition ---
+graph_builder = StateGraph(State)
 
+# Add nodes
+graph_builder.add_node("pre_retrieve", pre_retrieve)
+graph_builder.add_node("tools", tools_node)
+graph_builder.add_node("generate_initial_answer", generate_initial_answer)
+graph_builder.add_node("generate_final_answer", generate_final_answer)
+graph_builder.add_node("cleanup_messages", cleanup_messages)
 
-graph_builder.add_edge("generate_initial_answer", "query_or_respond")
-graph_builder.add_edge("tools", "generate")
-graph_builder.add_edge("generate", "validate")
+# Set entry point
+graph_builder.set_entry_point("pre_retrieve")
 
+# Add edges
 graph_builder.add_conditional_edges(
-    "query_or_respond", route_after_query, {"tools": "tools", "validate": "validate"}
+    "pre_retrieve",
+    route_after_query,
+    {"tools": "tools", "generate_initial_answer": "generate_initial_answer"},
 )
-graph_builder.add_conditional_edges(
-    "validate", route_after_validate, {"query_or_respond": "query_or_respond", END: END}
-)
+graph_builder.add_edge("tools", "generate_initial_answer")
+graph_builder.add_edge("generate_initial_answer", "generate_final_answer")
+graph_builder.add_edge("generate_final_answer", "cleanup_messages")
+graph_builder.add_edge("cleanup_messages", END)
 
 # --- Checkpoint Saver ---
 # Using InMemorySaver, state is lost on server restart.

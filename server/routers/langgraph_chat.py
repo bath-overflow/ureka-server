@@ -1,5 +1,4 @@
-from typing import Any, Dict
-
+# from pprint import pprint
 from fastapi import APIRouter, HTTPException, UploadFile
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -61,20 +60,11 @@ async def handle_chat_message(
     config = {"configurable": {"thread_id": project_id}}
 
     try:
-        # Get current state to determine if it's the first message
-        state = await graph.aget_state(config)
-        is_first_message = not state or not state.values.get("messages")
-
-        stream_input: Dict[str, Any]
-        if is_first_message:
-            # For the first message, set initial_query and collection_name
-            stream_input = {
-                "initial_query": request.message,
-                "collection_name": project_id,  # Pass collection name here
-            }
-        else:
-            # For subsequent messages, add the human message
-            stream_input = {"messages": [HumanMessage(content=request.message)]}
+        stream_input = {
+            "user_query": request.message,
+            "collection_name": project_id,
+            "messages": [HumanMessage(content=request.message)],
+        }
 
         final_state = None
         async for event in graph.astream(
@@ -84,6 +74,10 @@ async def handle_chat_message(
         ):
             # Keep track of the latest state values
             final_state = event
+            # Print the current state for debugging
+            # print("State:")
+            # pprint(event)
+            # print("======================", flush=True)
 
         if final_state and final_state.get("messages"):
             last_message = final_state["messages"][-1]
