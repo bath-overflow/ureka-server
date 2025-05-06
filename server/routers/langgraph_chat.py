@@ -1,5 +1,8 @@
 # from pprint import pprint
+import traceback
+
 from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 
 from server.services.langgraph_service import (
@@ -116,3 +119,53 @@ async def handle_chat_message(
 
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to process message: {e}")
+
+
+@chat_router.post("/{project_id}/message/stream")
+async def handle_chat_message_stream(
+    project_id: str,
+    request: ChatMessageRequest,
+):
+    """
+    Handles a user message within a chat thread and streams the response token by token.
+    Uses Server-Sent Events (SSE) to stream the response.
+    """
+
+    async def generate_response():
+        """Inner async generator to stream the response."""
+        config = {"configurable": {"thread_id": project_id}}
+        current_node = None
+        final_response = ""
+
+        try:
+            stream_input = {
+                "user_query": request.message,
+                "collection_name": project_id,
+                "messages": [HumanMessage(content=request.message)],
+            }
+
+            # Stream the response from the graph with token-by-token streaming
+            async for chunk, metadata in graph.astream(
+                stream_input,
+                config=config,
+                stream_mode="messages",  # Stream token by token
+            ):
+                current_node = metadata["langgraph_node"]
+
+                # Only stream tokens from the generate_final_answer node
+                if current_node == "generate_final_answer" and isinstance(
+                    chunk, AIMessage
+                ):
+                    # For token-by-token streaming, the content is the new token
+                    token = chunk.content
+                    final_response += token
+                    yield f"event: token\ndata: {token}\n\n"
+
+        except Exception as e:
+            error_msg = f"Error processing message: {str(e)}"
+            print(f"Error handling message for thread {project_id}: {e}")
+            traceback.print_exc()
+            yield f"event: error\ndata: {error_msg}\n\n"
+
+    # Return a streaming response
+    return StreamingResponse(generate_response(), media_type="text/event-stream")

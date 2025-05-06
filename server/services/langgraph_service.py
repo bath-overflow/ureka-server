@@ -135,7 +135,7 @@ def pre_retrieve(state: State):
         "context from documents.\n",
         "If document retrieval is needed, call the retrieve tool with a well-formed",
         "search query.\n\n",
-        "Question: {user_query}\n\n",
+        f"Question: {user_query}\n\n",
         "Think carefully - if this is a question about specific information that might",
         "be in the uploaded documents,",
         "use the retrieve tool. If it's general knowledge or doesn't require",
