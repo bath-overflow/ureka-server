@@ -24,7 +24,7 @@ db: Database = client[DATABASE_NAME]
 chat_history_collection: Collection = db["chathistory"]
 
 
-def create_chat_history(chat_id: int) -> ChatHistory:
+def create_chat_history(chat_id: str) -> ChatHistory:
     """
     Create a new chat history document and insert it into the database.
     """
@@ -33,7 +33,7 @@ def create_chat_history(chat_id: int) -> ChatHistory:
     return chat_history
 
 
-def get_chat_history(chat_id: int) -> ChatHistory | None:
+def get_chat_history(chat_id: str) -> ChatHistory | None:
     """
     Retrieve a chat history by project_id.
     """
@@ -43,7 +43,7 @@ def get_chat_history(chat_id: int) -> ChatHistory | None:
     return None
 
 
-def append_chat_message(chat_id: int, message: ChatMessage) -> ChatHistory | None:
+def append_chat_message(chat_id: str, message: ChatMessage) -> ChatHistory | None:
     """
     Append a chat message to the chat history.
     """
@@ -57,7 +57,7 @@ def append_chat_message(chat_id: int, message: ChatMessage) -> ChatHistory | Non
 
 if __name__ == "__main__":
     # Example usage
-    chat_id = 1
+    chat_id = "1"
     create_chat_history(chat_id)
     chat_history = get_chat_history(chat_id)
     print(chat_history)

@@ -29,7 +29,35 @@ class ChatHistory(BaseModel):
     Chat history model.
     """
 
-    id: int = Field(..., description="Chat history ID")
+    id: str = Field(..., description="Chat history ID")
+    # project_id: str = Field(..., description="Project ID")
+    # user_id: str = Field(..., description="User ID")
+    messages: list[ChatMessage] = Field(
+        default_factory=list, description="List of chat messages"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "messages": [
+                    {
+                        "id": 1,
+                        "role": "user",
+                        "message": "Hello, how can I help you?",
+                        "created_at": "2023-01-01T00:00:00Z",
+                    }
+                ],
+            }
+        }
+
+
+class ChatHistoryResponse(BaseModel):
+    """
+    Chat history response model.
+    """
+
+    id: str = Field(..., description="Chat history ID")
     messages: list[ChatMessage] = Field(
         default_factory=list, description="List of chat messages"
     )

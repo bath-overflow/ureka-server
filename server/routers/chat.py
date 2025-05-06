@@ -1,50 +1,41 @@
-from enum import Enum
-
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from server.models.chat import ChatHistoryResponse, ChatMessage
+from server.services.chat import ChatService
 
 chat_router = APIRouter()
 
-
-class ChatEvent(str, Enum):
-    SEND_MESSAGE = "send_message"
-    JOIN_CHAT = "join_chat"
-    LEAVE_CHAT = "leave_chat"
-    MESSAGE_RECEIVED = "message_received"
-    USER_JOINED = "user_joined"
-    USER_LEFT = "user_left"
-    ERROR = "error"
-    CONNECTED = "connected"
-    DISCONNECTED = "disconnected"
+chat_service = ChatService()
 
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: list[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def broadcast(self, event: ChatEvent, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(f"{event.value}: {message}")
-
-
-manager = ConnectionManager()
-
-
-@chat_router.websocket("/ws/chat")
-async def chat_websocket(websocket: WebSocket):
-    await manager.connect(websocket)
+@chat_router.websocket("/ws/chat/{chat_id}")
+async def chat_websocket(websocket: WebSocket, chat_id: str):
+    """
+    WebSocket 연결 및 메시지 처리
+    """
+    await chat_service.connect_user(chat_id, websocket)
     try:
-        await manager.broadcast(ChatEvent.CONNECTED, "A user has connected.")
+        await chat_service.send_message_to_user(chat_id, f"User {chat_id} connected.")
         while True:
             data = await websocket.receive_text()
-            # LLM 응답 생성 로직 추가 지금은 단순 echo
-            await manager.broadcast(ChatEvent.MESSAGE_RECEIVED, data)
+
+            # 메시지 저장
+            message = ChatMessage(content=data)
+            chat_service.save_message(chat_id, message)
+
+            # Echo 메시지 전송 (예시)
+            await chat_service.send_message_to_user(chat_id, f"Echo: {data}")
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        await manager.broadcast(ChatEvent.DISCONNECTED, "A user has disconnected.")
+        chat_service.disconnect_user(chat_id)
+
+
+@chat_router.get("/chat/{chat_id}/history", response_model=ChatHistoryResponse)
+async def get_chat_history(chat_id: str):
+    """
+    특정 채팅방의 메시지 히스토리 가져오기
+    """
+    chat_history = chat_service.get_history(chat_id)
+    if chat_history:
+        return chat_history
+    else:
+        return {"message": "No chat history found."}
