@@ -10,3 +10,6 @@ wheels/
 .venv
 *.pdf
 chroma_storage/
+
+.idea
+.vscode

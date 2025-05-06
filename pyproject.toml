@@ -12,6 +12,7 @@ dependencies = [
     "langchain-chroma>=0.2.3",
     "langchain-openai>=0.3.14",
     "minio>=7.2.15",
+    "pymongo>=4.12.1",
     "python-multipart>=0.0.20",
     "uvicorn>=0.34.1",
 ]
