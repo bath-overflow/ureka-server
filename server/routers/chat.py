@@ -1,30 +1,40 @@
+import uuid
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from server.models.chat import ChatHistoryResponse, ChatMessage
-from server.services.chat import ChatService
+from server.services.chat import ChatEvent, ChatInfo, ChatService
 
 chat_router = APIRouter()
 
 chat_service = ChatService()
 
 
-@chat_router.websocket("/ws/chat/{chat_id}")
-async def chat_websocket(websocket: WebSocket, chat_id: str):
+@chat_router.websocket("/ws/chat")
+async def chat_websocket(websocket: WebSocket, chat_id: str = None):
     """
     WebSocket 연결 및 메시지 처리
     """
+    if chat_id is None:
+        chat_id = uuid.uuid4().hex
     await chat_service.connect_user(chat_id, websocket)
     try:
-        await chat_service.send_message_to_user(chat_id, f"User {chat_id} connected.")
+        await chat_service.send_message_to_user(
+            chat_id,
+            ChatEvent.CONNECTED.value,
+            ChatInfo.CONNECTED.value,
+        )
         while True:
             data = await websocket.receive_text()
 
             # 메시지 저장
-            message = ChatMessage(content=data)
+            message = ChatMessage.model_validate_strings(data)
             chat_service.save_message(chat_id, message)
 
             # Echo 메시지 전송 (예시)
-            await chat_service.send_message_to_user(chat_id, f"Echo: {data}")
+            await chat_service.send_message_to_user(
+                chat_id, ChatEvent.MESSAGE_RECEIVED, message.message
+            )
     except WebSocketDisconnect:
         chat_service.disconnect_user(chat_id)
 

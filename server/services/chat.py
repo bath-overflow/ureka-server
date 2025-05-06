@@ -21,6 +21,12 @@ class ChatEvent(str, Enum):
     DISCONNECTED = "disconnected"
 
 
+class ChatInfo(str, Enum):
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    MESSAGE_RECEIVED = "message_received"
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: dict[str, WebSocket] = {}
@@ -65,10 +71,9 @@ class ChatService:
         """
         사용자 연결 관리 및 채팅방 생성
         """
-        await websocket.accept()
-        self.connection_manager.connect(chat_id, websocket)
+        await self.connection_manager.connect(chat_id, websocket)
 
-    async def save_message(self, chat_id: str, message: ChatMessage):
+    def save_message(self, chat_id: str, message: ChatMessage):
         """
         메시지를 DB에 저장하고 채팅 히스토리 업데이트
         """
@@ -87,13 +92,11 @@ class ChatService:
         """
         self.connection_manager.disconnect(chat_id)
 
-    async def send_message_to_user(self, chat_id: str, message: str):
+    async def send_message_to_user(self, chat_id: str, event: str, message: str):
         """
         특정 사용자에게 메시지 전송
         """
-        await self.connection_manager.send_message(
-            chat_id, ChatEvent.MESSAGE_RECEIVED, message
-        )
+        await self.connection_manager.send_message(chat_id, event, message)
 
 
 service = ChatService()

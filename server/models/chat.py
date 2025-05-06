@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -8,10 +9,14 @@ class ChatMessage(BaseModel):
     Chat message model.
     """
 
-    id: str = Field(..., description="Chat message ID (UUID or ObjectId)")
+    id: str = Field(
+        default=uuid.uuid4().hex, description="Chat message ID (UUID or ObjectId)"
+    )
     role: str = Field(..., description="Role of the user (user or assistant)")
     message: str = Field(..., description="Chat message")
-    created_at: datetime = Field(..., description="Chat creation timestamp")
+    created_at: datetime = Field(
+        default=datetime.now(), description="Chat creation timestamp"
+    )
 
     class Config:
         json_schema_extra = {
