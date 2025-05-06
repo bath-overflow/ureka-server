@@ -1,0 +1,38 @@
+name: Build Docker Image
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+on:
+  push:
+    branches:
+      - main # 혹은 'master', 또는 테스트하고 싶은 브랜치 이름
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: false
+          tags: ureka-server:latest
+          context: .
+          outputs: type=docker,dest=${{ runner.temp }}/ureka-server.tar
+          cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
+          cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache-new,mode=max
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ureka-server
+          path: ${{ runner.temp }}/ureka-server.tar
