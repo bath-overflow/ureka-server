@@ -1,7 +1,8 @@
 name: Run Build and Test
 
 permissions:
-  contents: read
+  checks: write
+  pull-requests: write
 
 on:
   push:
@@ -64,7 +65,7 @@ jobs:
 
       - name: Run tests
         run: |
-          docker run --rm --name test-container -v ./junit:/app/junit/ ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }} uv run pytest --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml || true
+          docker run --rm --name test-container -v ./junit:/app/junit/ ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }} uv run pytest --doctest-modules --continue-on-collection-errors --junitxml=junit/test-results-${{ matrix.python-version }}.xml || true
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v5
