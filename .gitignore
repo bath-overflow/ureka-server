@@ -6,6 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+junit/
+
 # Virtual environments
 .venv
 *.pdf
