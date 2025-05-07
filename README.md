@@ -4,3 +4,9 @@
 2. `uv sync`
 3. `uv run pre-commit install`
 4. `uv run uvicorn main:app`
+
+
+## Setup docker compsose
+
+`docker-compose -f docker-compose.dev.yml up --build`
+

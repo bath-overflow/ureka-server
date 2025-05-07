@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -27,8 +28,11 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
         while True:
             data = await websocket.receive_text()
 
+            # 문자열을 딕셔너리로 변환
+            data_dict = json.loads(data)
+
             # 메시지 저장
-            message = ChatMessage.model_validate_strings(data)
+            message = ChatMessage.model_validate(data_dict)
             chat_service.save_message(chat_id, message)
 
             # Echo 메시지 전송 (예시)
