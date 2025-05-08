@@ -30,12 +30,9 @@ async def chat(websocket: websockets.ClientConnection, chat_id=None):
     while True:
         # Get user input
         console.print(
-            "[bold green]Enter your message (or 'exit' to quit):[/bold green]"
+            "[bold green]Enter your message (or 'Ctrl+C' to quit):[/bold green]"
         )
         user_input = input("> ")
-
-        if user_input.lower() == "exit":
-            break
 
         # Create and send message
         message = ChatMessage(
