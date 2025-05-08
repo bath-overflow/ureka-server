@@ -1,19 +1,12 @@
 version: '3.8'
 
 services:
-  nginx:
-    image: nginx:latest
-    ports:
-      - "8060:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    networks:
-      - internal
-    depends_on:
-      - api
-      - minio
   api:
-    image: cocopam/ureka-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -35,21 +28,21 @@ services:
       - minio
       - chroma
       - mongodb
-    networks:
-      - internal
+
   mongodb:
     image: mongo:latest
+    ports:
+      - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpassword
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped
-    networks:
-      - internal
-
   postgres:
     image: postgres:15
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -57,11 +50,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
-    networks:
-      - internal
 
   minio:
     image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -74,8 +68,6 @@ services:
     volumes:
       - minio_data:/data
     restart: unless-stopped
-    networks:
-      - internal
 
 
   chroma:
@@ -85,8 +77,8 @@ services:
     volumes:
       - chroma_data:/data
     restart: unless-stopped
-    networks:
-      - internal
+    ports:
+      - "8001:8001"
 
 
 volumes:
@@ -94,6 +86,3 @@ volumes:
   minio_data:
   chroma_data:
   mongo_data:
-
-networks:
-  internal:
