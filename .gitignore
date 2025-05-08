@@ -11,6 +11,9 @@ wheels/
 *.pdf
 chroma_storage/
 
+.idea
+.vscode
+
 # dotenv
 .env
 

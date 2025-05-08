@@ -16,6 +16,7 @@ dependencies = [
     "langchain-text-splitters>=0.3.8",
     "langgraph>=0.3.34",
     "minio>=7.2.15",
+    "pymongo>=4.12.1",
     "pypdf>=5.4.0",
     "python-multipart>=0.0.20",
     "uvicorn>=0.34.1",
