@@ -1,8 +1,8 @@
 import os
+import traceback
 from typing import Annotated, Any, Dict, Literal, TypedDict
 
 # from langgraph.checkpoint.memory import InMemorySaver
-import aiosqlite
 from langchain_community.document_loaders import PyPDFLoader  # Keep for BytesIO loading
 from langchain_core.documents import Document
 from langchain_core.messages import (
@@ -14,7 +14,6 @@ from langchain_core.messages import (
 )
 from langchain_core.tools import tool
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import InjectedState, ToolNode
@@ -113,6 +112,41 @@ def retrieve(
 
 
 # --- Node Definitions ---
+def load_chat_history(state: State):
+    """Loads the chat history from ChatHistory at the start of the graph."""
+    print("--- Loading chat history ---")
+    # Use the server's vector_store instance
+    collection_name = state.get("collection_name")
+    if not collection_name:
+        print("Error: No collection name found in state for load_chat_history")
+        raise ValueError("Collection name not found in state")
+
+    # Get chat history from ChatService
+    from server.routers.chat import chat_service
+
+    chat_history = chat_service.get_history(collection_name)
+    if chat_history is None:
+        print(f"Error: No chat history found for collection '{collection_name}'")
+        raise ValueError(f"No chat history found for collection '{collection_name}'")
+    print(f"--- Loaded {len(chat_history.messages)} messages from chat history ---")
+
+    # Add chat history messages to the state
+    messages = [
+        (
+            HumanMessage(content=chat_msg.message)
+            if chat_msg.role == "user"
+            else AIMessage(content=chat_msg.message)
+        )
+        for chat_msg in chat_history.messages
+    ]
+
+    print(f"Loaded {len(messages)} messages from chat history")
+
+    return {
+        "messages": messages,
+    }
+
+
 def pre_retrieve(state: State):
     """Given the query, decides whether to retrieve documents or use LLM knowledge."""
     print("--- Pre-retrieve: Analyzing query ---")
@@ -305,6 +339,7 @@ def route_after_query(state: State) -> Literal["tools", "generate_initial_answer
 graph_builder = StateGraph(State)
 
 # Add nodes
+graph_builder.add_node("load_chat_history", load_chat_history)
 graph_builder.add_node("pre_retrieve", pre_retrieve)
 graph_builder.add_node("tools", tools_node)
 graph_builder.add_node("generate_initial_answer", generate_initial_answer)
@@ -312,9 +347,10 @@ graph_builder.add_node("generate_final_answer", generate_final_answer)
 graph_builder.add_node("cleanup_messages", cleanup_messages)
 
 # Set entry point
-graph_builder.set_entry_point("pre_retrieve")
+graph_builder.set_entry_point("load_chat_history")
 
 # Add edges
+graph_builder.add_edge("load_chat_history", "pre_retrieve")
 graph_builder.add_conditional_edges(
     "pre_retrieve",
     route_after_query,
@@ -325,17 +361,49 @@ graph_builder.add_edge("generate_initial_answer", "generate_final_answer")
 graph_builder.add_edge("generate_final_answer", "cleanup_messages")
 graph_builder.add_edge("cleanup_messages", END)
 
-# --- Checkpoint Saver ---
-# Using InMemorySaver, state is lost on server restart.
-# For persistence, replace with a persistent checkpointer
-# (e.g., LangGraph's Redis or Postgres savers)
-# memory = InMemorySaver()
-
-conn = aiosqlite.connect("socratic_teacher.db", check_same_thread=False)
-memory = AsyncSqliteSaver(conn)
-
 # --- Compile Graph ---
-graph = graph_builder.compile(checkpointer=memory)
+graph = graph_builder.compile()
+
+
+async def stream_chat_response(chat_id: str, user_message: str):
+    """
+    Interface function to the graph that streams responses from the AI.
+
+    Args:
+        chat_id: Identifier for the chat/collection (used for both MongoDB and
+            vector store)
+        user_message: The message from the user
+
+    Yields:
+        Tokens from the AI response as they're generated
+    """
+    current_node = None
+
+    try:
+        # Prepare input for the graph
+        stream_input = {
+            "user_query": user_message,
+            "collection_name": chat_id,
+            "messages": [HumanMessage(content=user_message)],
+        }
+
+        # Stream the response from the graph with token-by-token streaming
+        async for chunk, metadata in graph.astream(
+            stream_input,
+            stream_mode="messages",  # Stream token by token
+        ):
+            current_node = metadata["langgraph_node"]
+
+            # Only stream tokens from the generate_final_answer node
+            if current_node == "generate_final_answer" and isinstance(chunk, AIMessage):
+                # For token-by-token streaming, the content is the new token
+                yield chunk.content
+
+    except Exception as e:
+        error_msg = f"Error in stream_chat_response: {str(e)}"
+        print(f"Error processing message for chat {chat_id}: {e}")
+        traceback.print_exc()
+        yield f"[ERROR: {error_msg}]"
 
 
 # --- Pydantic Models for API ---
