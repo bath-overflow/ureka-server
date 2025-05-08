@@ -5,6 +5,7 @@ from fastapi import WebSocket
 from server.models.chat import ChatHistory, ChatMessage
 from server.repositories.chat_store import (
     append_chat_message,
+    create_chat_history,
     get_chat_history,
 )
 
@@ -78,6 +79,9 @@ class ChatService:
         메시지를 DB에 저장하고 채팅 히스토리 업데이트
         """
 
+        chat_history = get_chat_history(chat_id)
+        if not chat_history:
+            create_chat_history(chat_id)
         append_chat_message(chat_id, message)
 
     def get_history(self, chat_id: str) -> ChatHistory | None:
