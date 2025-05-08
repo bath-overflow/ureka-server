@@ -1,27 +1,46 @@
-from datetime import datetime
-
 from pydantic import BaseModel, Field
+from sqlalchemy import Column, String
+
+from server.utils.db import Base
 
 
-class Project(BaseModel):
-    """
-    Project model.
-    """
+# -------------------------
+# ORM 모델
+# -------------------------
+class Project(Base):
+    __tablename__ = "projects"
 
-    id: int = Field(..., description="Project ID")
-    name: str = Field(..., description="Project name")
-    description: str = Field(..., description="Project description")
-    created_at: datetime = Field(..., description="Project creation date")
-    updated_at: datetime = Field(..., description="Project update date")
+    id = Column(String, primary_key=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+
+
+# -------------------------
+# Pydantic 스키마
+# -------------------------
+class ProjectCreate(BaseModel):
+    title: str = Field(..., description="Project title")
+    description: str = Field("", description="Project description")
 
     class Config:
-        orm_mode = True
         json_schema_extra = {
             "example": {
-                "id": 1,
-                "name": "Project Name",
-                "description": "Project description goes here.",
-                "created_at": "2023-01-01T00:00:00Z",
-                "updated_at": "2023-01-01T00:00:00Z",
+                "title": "Ureka Research Project",
+                "description": "A project for learning assistant research",
             }
         }
+
+
+class ProjectUpdate(ProjectCreate):
+    pass
+
+
+class ProjectResponse(ProjectCreate):
+    id: str
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectListResponse(BaseModel):
+    projects: list[ProjectResponse]

@@ -1,29 +1,20 @@
-from typing import List, Optional
+from typing import List
 
 from pydantic import BaseModel, Field
+from sqlalchemy import Column, DateTime, Integer, String, func
+
+from server.utils.db import Base
 
 
-class Document(BaseModel):
-    """
-    Document model.
-    """
+class Document(Base):
+    __tablename__ = "documents"
 
-    id: Optional[int] = Field(None, description="Document ID")
-    title: str = Field(..., description="Document title")
-    content: str = Field(..., description="Document content")
-    created_at: Optional[str] = Field(None, description="Document creation date")
-
-    class Config:
-        orm_mode = True
-        schema_extra = {
-            "example": {
-                "id": 1,
-                "title": "Document Title",
-                "content": "Document content goes here.",
-                "created_at": "2023-01-01T00:00:00Z",
-                "updated_at": "2023-01-01T00:00:00Z",
-            }
-        }
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(String, nullable=False)
+    filename = Column(String, nullable=False)
+    file_url = Column(String, nullable=False)
+    size = Column(Integer)
+    upload_date = Column(DateTime, default=func.now())
 
 
 class DocumentCreate(BaseModel):
@@ -35,7 +26,7 @@ class DocumentCreate(BaseModel):
     content: str = Field(..., description="Document content")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "title": "Document Title",
                 "content": "Document content goes here.",
@@ -55,8 +46,8 @@ class DocumentResponse(BaseModel):
     updated_at: str = Field(..., description="Document update date")
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "id": 1,
                 "title": "Document Title",
@@ -76,8 +67,8 @@ class DocumentListResponse(BaseModel):
     total: int = Field(..., description="Total number of documents")
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "documents": [
                     {
@@ -109,7 +100,7 @@ class DocumentDeleteResponse(BaseModel):
     id: int = Field(..., description="Document ID")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "message": "Document deleted successfully",
                 "id": 1,
