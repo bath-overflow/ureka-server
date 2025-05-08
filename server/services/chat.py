@@ -26,6 +26,7 @@ class ChatInfo(str, Enum):
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     MESSAGE_RECEIVED = "message_received"
+    END_OF_STREAM = "<EOS>"
 
 
 class ConnectionManager:

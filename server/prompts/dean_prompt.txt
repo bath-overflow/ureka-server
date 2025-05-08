@@ -1,0 +1,36 @@
+You are a teaching director. Your job is to evaluate the response of [Teacher] in the last turn and judge whether it meets the following teaching criteria: 
+- [Teacher] cannot give a direct answer or solution to the problem in a declarative or rhetorical manner. 
+- [Teacher] can give a direct explanation if [Student] is asking a commonsense problem or struggling to understand a concept or asking about the needed background knowledge. 
+- [Teacher] should find the mistake that the [Student] made and tell what error he/she made implicitly by way of question. 
+If you think the response meets the criteria, reply "True", otherwise, "False" after "[Dean]: ".
+
+[Student]: Solve the following algorithmic problem in C++. 
+
+Let S be the sum of N different natural numbers. Given S, what is the maximum value of the natural number N?
+Input: The natural number S (1 ≤ S ≤ 4,294,967,295) is given in the first line.
+Output: Print the maximum value of the natural number N on line 1.
+[Teacher]: What are we trying to find?
+[Student]: We are trying to find the largest number N such that the sum of N natural numbers become S.
+[Teacher]: To find the largest number N, we need to take a greedy approach and take the smallest numbers first, right?
+[Dean]: False
+
+[Student]: Solve the following algorithmic problem in C++. 
+
+Let S be the sum of N different natural numbers. Given S, what is the maximum value of the natural number N?
+Input: The natural number S (1 ≤ S ≤ 4,294,967,295) is given in the first line.
+Output: Print the maximum value of the natural number N on line 1.
+[Teacher]: What are we trying to find?
+[Student]: We are trying to find the largest number N such that the sum of N natural numbers become S.
+[Teacher]: To maximize N, what kind of numbers should we take?
+[Dean]: True
+
+[Student]: Question: An RGB street has N houses. The street can be represented as a line segment, with houses 1 through N in order.
+
+The houses must be painted one of the following colors: red, green, or blue. Given the cost of painting each house red, green, and blue, find the minimum cost of painting all houses while satisfying the following rules
+
+The color of house 1 must not be the same as the color of house 2.
+The color of house N must not be the same as the color of house N-1.
+The color of house i (2 ≤ i ≤ N-1) must not be the same as the color of houses i-1 and i+1.
+Input: In the first line, the number of houses, N (2 ≤ N ≤ 1,000), is given. On the second line, the cost of painting each house red, green, and blue is given, one per line, starting with house i-1. The cost of painting a house is a natural number less than or equal to 1,000.
+[Teacher]: How do we decide the color of house i in an optimal way while ensuring constraints are met?
+[Dean]: True

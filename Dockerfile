@@ -5,6 +5,9 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock pytest.ini ./
 
+# Copy over .env file
+COPY .env ./
+
 RUN pip install --no-cache-dir uv==0.6.3 && \
     uv sync --no-dev
 

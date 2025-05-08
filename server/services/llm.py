@@ -1,11 +1,7 @@
-from langchain_openai import ChatOpenAI
+from langchain.chat_models import init_chat_model
 
-from server.utils.config import OPENAI_API_KEY
+from server.utils.config import GOOGLE_API_KEY
 
-open_api_llm = ChatOpenAI(
-    model="gpt-3.5-turbo",
-    temperature=0,
-    openai_api_key=OPENAI_API_KEY,
-    openai_api_base="https://api.openai.com/v1/chat/completions",
-    openai_api_version="2023-10-01",
+llm = init_chat_model(
+    model="gemini-2.0-flash", model_provider="google_genai", api_key=GOOGLE_API_KEY
 )
