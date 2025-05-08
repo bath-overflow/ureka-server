@@ -128,7 +128,6 @@ def load_chat_history(state: State):
     if chat_history is None:
         print(f"Error: No chat history found for collection '{collection_name}'")
         raise ValueError(f"No chat history found for collection '{collection_name}'")
-    print(f"--- Loaded {len(chat_history.messages)} messages from chat history ---")
 
     # Add chat history messages to the state
     messages = [
@@ -140,7 +139,7 @@ def load_chat_history(state: State):
         for chat_msg in chat_history.messages
     ]
 
-    print(f"Loaded {len(messages)} messages from chat history")
+    print(f"--- Loaded {len(messages)} messages from chat history ---")
 
     return {
         "messages": messages,

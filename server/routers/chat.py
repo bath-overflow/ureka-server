@@ -18,7 +18,7 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
     """
     WebSocket connection handler with streaming AI responses
     """
-    if chat_id is None:
+    if new_chat := chat_id is None:
         chat_id = uuid.uuid4().hex
     await chat_service.connect_user(chat_id, websocket)
     try:
@@ -27,6 +27,12 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
             ChatEvent.CONNECTED.value,
             ChatInfo.CONNECTED.value,
         )
+        if new_chat:
+            await chat_service.send_message_to_user(
+                chat_id,
+                ChatEvent.CONNECTED.value,
+                f"Your chat_id is: {chat_id}",
+            )
         while True:
             data = await websocket.receive_text()
             data_dict = json.loads(data)
@@ -37,7 +43,7 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
 
             # Notify client that we received the message
             await chat_service.send_message_to_user(
-                chat_id, ChatEvent.MESSAGE_RECEIVED, "Processing your message..."
+                chat_id, ChatEvent.MESSAGE_RECEIVED.value, "Processing your message..."
             )
 
             # Stream AI response
@@ -47,13 +53,13 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
                 # Send each token individually
                 # await websocket.send_text(f"{ChatEvent.SEND_MESSAGE}: {token}")
                 await chat_service.send_message_to_user(
-                    chat_id, ChatEvent.SEND_MESSAGE, token
+                    chat_id, ChatEvent.SEND_MESSAGE.value, token
                 )
                 full_response += token
 
             # Signal end of stream
             await chat_service.send_message_to_user(
-                chat_id, ChatEvent.SEND_MESSAGE, "<EOS>"
+                chat_id, ChatEvent.SEND_MESSAGE.value, ChatInfo.END_OF_STREAM.value
             )
 
             # Save the complete AI response to chat history
@@ -69,7 +75,9 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
     except Exception as e:
         # Send error to client
         error_message = f"Error: {str(e)}"
-        await chat_service.send_message_to_user(chat_id, ChatEvent.ERROR, error_message)
+        await chat_service.send_message_to_user(
+            chat_id, ChatEvent.ERROR.value, error_message
+        )
         # Then disconnect
         chat_service.disconnect_user(chat_id)
         traceback.print_exc()
