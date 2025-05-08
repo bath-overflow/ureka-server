@@ -78,18 +78,6 @@ wheels = [
 ]
 
 [[package]]
-name = "aiosqlite"
-version = "0.21.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/13/7d/8bca2bf9a247c2c5dfeec1d7a5f40db6518f88d314b8bca9da29670d2671/aiosqlite-0.21.0.tar.gz", hash = "sha256:131bb8056daa3bc875608c631c678cda73922a2d4ba8aec373b19f18c17e7aa3", size = 13454 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/10/6c25ed6de94c49f88a91fa5018cb4c0f3625f31d5be9f771ebe5cc7cd506/aiosqlite-0.21.0-py3-none-any.whl", hash = "sha256:2549cf4057f95f53dcba16f2b64e8e2791d7e1adedb13197dd8ed77bb226d7d0", size = 15792 },
-]
-
-[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1154,19 +1142,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0d/df/bacef68562ba4c391ded751eecda8e579ec78a581506064cf625e0ebd93a/langgraph_checkpoint-2.0.24.tar.gz", hash = "sha256:9596dad332344e7e871257be464df8a07c2e9bac66143081b11b9422b0167e5b", size = 37328 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/60/30397e8fd2b7dead3754aa79d708caff9dbb371f30b4cd21802c60f6b921/langgraph_checkpoint-2.0.24-py3-none-any.whl", hash = "sha256:3836e2909ef2387d1fa8d04ee3e2a353f980d519fd6c649af352676dc73d66b8", size = 42028 },
-]
-
-[[package]]
-name = "langgraph-checkpoint-sqlite"
-version = "2.0.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiosqlite" },
-    { name = "langgraph-checkpoint" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9c/89/125b80e41ddeb8476654a8cda4b76ee999e4fb3d5913ff9c2b45fb9bfff7/langgraph_checkpoint_sqlite-2.0.7.tar.gz", hash = "sha256:344f307c0840a1cbd85a18dcd6daac8e989947979c1a43c2bdc6c6f4ed12084a", size = 9584 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/72/86354caec3bd546ea596422dcaf8495a052287400a9961c2b45264536d1e/langgraph_checkpoint_sqlite-2.0.7-py3-none-any.whl", hash = "sha256:b04decd8c3f7c2966ca63b4fa11eb789a03b27001e4d855ccd132c50da59812b", size = 12958 },
 ]
 
 [[package]]
@@ -2526,6 +2501,7 @@ dependencies = [
     { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-google-genai" },
+    { name = "langchain-huggingface" },
     { name = "langchain-openai" },
     { name = "langchain-text-splitters" },
     { name = "langgraph" },
@@ -2538,9 +2514,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "aiosqlite" },
-    { name = "langchain-huggingface" },
-    { name = "langgraph-checkpoint-sqlite" },
     { name = "pre-commit" },
     { name = "pytest" },
 ]
@@ -2554,21 +2527,19 @@ requires-dist = [
     { name = "langchain-chroma", specifier = ">=0.2.3" },
     { name = "langchain-community", specifier = ">=0.3.21" },
     { name = "langchain-google-genai", specifier = ">=2.1.3" },
+    { name = "langchain-huggingface", specifier = ">=0.1.2" },
     { name = "langchain-openai", specifier = ">=0.3.14" },
     { name = "langchain-text-splitters", specifier = ">=0.3.8" },
     { name = "langgraph", specifier = ">=0.3.34" },
     { name = "minio", specifier = ">=7.2.15" },
-    { name = "pypdf", specifier = ">=5.4.0" },
     { name = "pymongo", specifier = ">=4.12.1" },
+    { name = "pypdf", specifier = ">=5.4.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "uvicorn", specifier = ">=0.34.1" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aiosqlite", specifier = ">=0.21.0" },
-    { name = "langchain-huggingface", specifier = ">=0.1.2" },
-    { name = "langgraph-checkpoint-sqlite", specifier = ">=2.0.7" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pytest", specifier = ">=8.3.5" },
 ]
