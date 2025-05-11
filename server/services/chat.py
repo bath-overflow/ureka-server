@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import AsyncGenerator, Callable
 
 from fastapi import WebSocket
 
@@ -26,6 +27,7 @@ class ChatInfo(str, Enum):
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     MESSAGE_RECEIVED = "message_received"
+    END_OF_STREAM = "<EOS>"
 
 
 class ConnectionManager:
@@ -101,6 +103,48 @@ class ChatService:
         특정 사용자에게 메시지 전송
         """
         await self.connection_manager.send_message(chat_id, event, message)
+
+    async def generate_and_stream_message_to_user(
+        self,
+        chat_id: str,
+        user_message: str,
+        stream_generator: Callable[[str, str], AsyncGenerator[str, None]],
+    ) -> str | None:
+        """
+        Generate and stream AI response
+
+        Args:
+            chat_id: The chat ID
+            user_message: The user's message to be used as AI input
+            stream_generator: A function that takes chat_id and user_message and
+            returns an async generator of response tokens
+
+        Returns:
+            The full AI response text, or None if failed
+        """
+        full_response = ""
+        response_started = False
+
+        async for token in stream_generator(chat_id, user_message):
+            # Check token validity
+            if token is None or not isinstance(token, str):
+                continue
+
+            response_started = True
+            # Send each token individually
+            await self.send_message_to_user(
+                chat_id, ChatEvent.SEND_MESSAGE.value, token
+            )
+            full_response += token
+
+        # Only signal end of stream if we've sent something
+        if response_started:
+            await self.send_message_to_user(
+                chat_id, ChatEvent.SEND_MESSAGE.value, ChatInfo.END_OF_STREAM.value
+            )
+            return full_response
+        else:
+            raise ValueError("No valid tokens received from AI response stream.")
 
 
 service = ChatService()
