@@ -6,12 +6,11 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, st
 from pydantic import ValidationError
 
 from server.models.chat import ChatHistoryResponse, ChatMessage
-from server.services.chat import ChatEvent, ChatInfo, ChatService
+from server.services.chat import ChatEvent, ChatInfo
+from server.services.chat import service as chat_service
 from server.services.langgraph_service import stream_chat_response
 
 chat_router = APIRouter()
-
-chat_service = ChatService()
 
 
 @chat_router.websocket("/ws/chat")
@@ -93,8 +92,10 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
 
             # Process and stream AI response
             try:
-                full_response = await process_ai_response(
-                    chat_id, user_message.message, websocket
+                full_response = await chat_service.generate_and_stream_message_to_user(
+                    chat_id,
+                    user_message.message,
+                    stream_chat_response,
                 )
 
                 # Save the complete AI response to chat history
@@ -134,40 +135,6 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
 
             # Ensure cleanup
             chat_service.disconnect_user(chat_id)
-
-
-async def process_ai_response(
-    chat_id: str, user_message: str, websocket: WebSocket
-) -> str | None:
-    """
-    Process AI response with proper error handling and streaming.
-
-    Returns:
-        The full AI response text
-    """
-    full_response = ""
-    response_started = False
-
-    async for token in stream_chat_response(chat_id, user_message):
-        # Check token validity
-        if token is None or not isinstance(token, str):
-            continue
-
-        response_started = True
-        # Send each token individually
-        await chat_service.send_message_to_user(
-            chat_id, ChatEvent.SEND_MESSAGE.value, token
-        )
-        full_response += token
-
-    # Only signal end of stream if we've sent something
-    if response_started:
-        await chat_service.send_message_to_user(
-            chat_id, ChatEvent.SEND_MESSAGE.value, ChatInfo.END_OF_STREAM.value
-        )
-        return full_response
-    else:
-        raise ValueError("No valid tokens received from AI response stream.")
 
 
 @chat_router.get("/chat/{chat_id}/history", response_model=ChatHistoryResponse)
