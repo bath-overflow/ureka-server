@@ -2,7 +2,6 @@
 
 from typing import List, Optional
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from server.models.document import Document
@@ -46,7 +45,3 @@ def delete_document_by_filename(db: Session, project_id: str, filename: str) -> 
         db.commit()
         return True
     return False
-
-
-def count_documents_by_project(db: Session, project_id: str) -> int:
-    return db.query(func.count(Document.id)).filter_by(project_id=project_id).scalar()
