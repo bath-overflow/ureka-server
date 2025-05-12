@@ -37,8 +37,8 @@ class DocumentResponse(BaseModel):
     Document response model.
     """
 
-    file_name: str = Field(..., alias="filename", description="Document filename")
-    file_url: str = Field(..., alias="fileUrl", description="Document file URL")
+    filename: str = Field(..., description="Document filename")
+    file_url: str = Field(..., description="Document file URL")
     size: int = Field(..., description="Document size")
     upload_date: str = Field(
         ..., alias="uploadDate", description="Document upload date"
