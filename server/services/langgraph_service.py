@@ -71,7 +71,7 @@ class LangGraphService:
         ):
             """Retrieves relevant documents uploaded by the user based on the query."""
             print(
-                "--- Retrieving documents for query: '{query}' in collection: "
+                f"--- Retrieving documents for query: '{query}' in collection: "
                 f"'{collection_name}' ---"
             )
             retrieved_docs = vector_store.get_documents(
