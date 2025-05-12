@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, Path, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from server.models.document import DocumentResponse
+from server.models.document_model import DocumentResponse
 from server.services.document import (
     delete_document,
     get_document_metadata,

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Path
 from sqlalchemy.orm import Session
 
-from server.models.project import (
+from server.models.project_model import (
     ProjectCreate,
     ProjectResponse,
     ProjectUpdate,

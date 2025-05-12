@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.live import Live
 from rich.text import Text
 
-from server.models.chat import ChatMessage
+from server.models.chat_model import ChatMessage
 from server.services.chat import ChatEvent, ChatInfo
 
 # Create a rich console for nicer output

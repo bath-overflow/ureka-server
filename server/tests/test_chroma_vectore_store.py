@@ -1,25 +1,4 @@
-import pytest
-from chromadb import Client
 from langchain_core.documents import Document
-from langchain_huggingface import HuggingFaceEmbeddings
-
-from server.repositories.vector_store import (
-    ChromaVectorStore,
-    VectorStore,
-)
-
-client = Client()
-
-
-@pytest.fixture
-def vector_store() -> VectorStore:
-    """
-    Fixture to create a new instance of MemoryVectorStore for each test.
-    """
-    embedding = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-    )
-    return ChromaVectorStore(embedding=embedding, client=client)
 
 
 def test_add_and_retrieve_documents(vector_store):
