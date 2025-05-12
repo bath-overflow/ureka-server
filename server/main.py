@@ -13,7 +13,7 @@ _ = Project
 Base.metadata.create_all(bind=engine)
 
 
-app = FastAPI(root_path="/server")
+app = FastAPI()
 
 app.include_router(document_router, tags=["documents"])
 app.include_router(chat_router, tags=["chat"])
