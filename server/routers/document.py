@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Path, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from server.models.document import DocumentResponse
 from server.services.document import (
     delete_document,
     get_document_metadata,
@@ -30,7 +31,7 @@ async def upload_document(
     return {"filename": document.filename}
 
 
-@router.get("/", response_model=List[dict])
+@router.get("/", response_model=List[DocumentResponse])
 def get_documents(
     projectId: str = Path(..., description="Project ID"), db: Session = Depends(get_db)
 ):
@@ -41,7 +42,7 @@ def get_documents(
     return [{"filename": doc.filename} for doc in result["documents"]]
 
 
-@router.get("/{filename}")
+@router.get("/{filename}", response_model=DocumentResponse)
 def get_document(
     projectId: str = Path(..., description="Project ID"),
     filename: str = Path(..., description="File name"),

@@ -6,7 +6,6 @@ from langchain_core.retrievers import BaseRetriever
 from sqlalchemy.orm import Session
 
 from server.repositories.document_store import (
-    count_documents_by_project,
     create_document,
     delete_document_by_filename,
     get_document_by_filename,
@@ -68,8 +67,7 @@ async def upload_and_register_document(
 
 def list_documents(db: Session, project_id: str):
     documents = get_documents_by_project(db, project_id)
-    total = count_documents_by_project(db, project_id)
-    return {"documents": documents, "total": total}
+    return {"documents": documents}
 
 
 def get_document_metadata(db: Session, project_id: str, filename: str):
