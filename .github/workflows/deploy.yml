@@ -21,6 +21,8 @@ jobs:
           script: |
             cd ureka-server
             git pull
+            export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            export GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
             docker pull ${{ vars.DOCKER_USERNAME }}/ureka-server:latest
             docker-compose down
             docker-compose up -d
