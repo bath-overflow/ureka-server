@@ -5,7 +5,7 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
 
-from server.models.chat import ChatHistory, ChatMessage
+from server.models.chat_model import ChatHistory, ChatMessage
 
 HOST = os.getenv("MONGO_HOST", "localhost")
 PORT = os.getenv("MONGO_PORT", "27017")

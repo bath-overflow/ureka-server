@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 from pydantic import ValidationError
 
-from server.models.chat import ChatHistoryResponse, ChatMessage
+from server.models.chat_model import ChatHistoryResponse, ChatMessage
 from server.services.chat import ChatEvent, ChatInfo
 from server.services.chat import service as chat_service
 from server.services.langgraph_service import stream_chat_response

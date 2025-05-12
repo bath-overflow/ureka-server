@@ -3,7 +3,7 @@ import uuid
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from server.models.project import Project, ProjectCreate
+from server.models.project_model import Project, ProjectCreate
 from server.repositories.project_store import (
     create_project,
     delete_project,

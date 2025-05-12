@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from server.models.document import Document
+from server.models.document_model import Document
 
 
 def create_document(

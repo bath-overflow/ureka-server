@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from server.models.project import Project
+from server.models.project_model import Project
 
 
 def get_all_projects(db: Session) -> list[Project]:

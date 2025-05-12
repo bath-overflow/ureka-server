@@ -3,7 +3,7 @@ from typing import AsyncGenerator, Callable
 
 from fastapi import WebSocket
 
-from server.models.chat import ChatHistory, ChatMessage
+from server.models.chat_model import ChatHistory, ChatMessage
 from server.repositories.chat_store import (
     append_chat_message,
     create_chat_history,
