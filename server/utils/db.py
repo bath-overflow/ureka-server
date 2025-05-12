@@ -24,6 +24,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # MinIO client settings
 MINIO_URL = os.environ.get("MINIO_ENDPOINT", "localhost:9000")
+IS_PROD = os.getenv("ENVIRONMENT") == "production"
+
 if os.environ.get("ENVIRONMENT") == "production":
     MINIO_URL = "minio.cspc.me"
 
@@ -31,7 +33,7 @@ minio_client = Minio(
     MINIO_URL,
     access_key=os.environ.get("MINIO_ACCESS_KEY", "minioadmin"),
     secret_key=os.environ.get("MINIO_SECRET_KEY", "minioadmin"),
-    secure=False,
+    secure=IS_PROD,
 )
 
 
