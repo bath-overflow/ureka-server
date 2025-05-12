@@ -43,6 +43,8 @@ jobs:
             ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
           platforms: linux/amd64,linux/arm64
           context: .
+          file: Dockerfile.prod
+
           cache-from: type=registry,ref=${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:buildcache
           annotations: ${{ steps.meta.outputs.annotations }}

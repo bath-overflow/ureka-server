@@ -1,31 +1,73 @@
-from fastapi import APIRouter, HTTPException, UploadFile
+# api/documents.py
 
-from server.repositories.documnet_store import save_pdf_to_db
+from typing import List
 
-document_router = APIRouter()
+from fastapi import APIRouter, Depends, File, Path, UploadFile
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+
+from server.models.document import DocumentResponse
+from server.services.document import (
+    delete_document,
+    get_document_metadata,
+    list_documents,
+    upload_and_register_document,
+)
+from server.utils.db import get_db
+
+router = APIRouter(prefix="/projects/{projectId}/resources")
 
 
-@document_router.post("/{id}/upload-pdf")
-async def upload_pdf(id: int, file: UploadFile = None):
+@router.post("/", status_code=201)
+async def upload_document(
+    projectId: str = Path(..., description="Project ID"),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
     """
-    Upload a PDF file and save it to the database.
+    Upload a resource to a project
     """
-    if file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+    document = await upload_and_register_document(db, projectId, file)
+    return {"filename": document.filename}
 
-    if not file:
-        raise HTTPException(status_code=400, detail="No file uploaded.")
-    # Read the file content
-    file_content = await file.read()
 
-    # Save the file to MinIO or any other storage
-    # 일단 로컬에 저장
-    file_name = f"{id}_{file.filename}"
-    with open(file_name, "wb") as f:
-        f.write(file_content)
-    # Save the file URL to the database
-    file_url = f"http://localhost:9000/{file_name}"
-    await save_pdf_to_db(id, file_name, file_url)
-    # Return a success response
+@router.get("/", response_model=List[DocumentResponse])
+def get_documents(
+    projectId: str = Path(..., description="Project ID"), db: Session = Depends(get_db)
+):
+    """
+    Get uploaded resources for a project
+    """
+    result = list_documents(db, projectId)
+    return [{"filename": doc.filename} for doc in result["documents"]]
 
-    return {"message": "PDF uploaded successfully"}
+
+@router.get("/{filename}", response_model=DocumentResponse)
+def get_document(
+    projectId: str = Path(..., description="Project ID"),
+    filename: str = Path(..., description="File name"),
+    db: Session = Depends(get_db),
+):
+    """
+    Get details of a specific resource
+    """
+    doc = get_document_metadata(db, projectId, filename)
+    return {
+        "filename": doc.filename,
+        "uploadDate": doc.upload_date.isoformat(),
+        "file_url": doc.file_url,
+        "size": doc.size,
+    }
+
+
+@router.delete("/{filename}", status_code=204)
+def delete_document_route(
+    projectId: str = Path(..., description="Project ID"),
+    filename: str = Path(..., description="File name"),
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a specific resource from a project
+    """
+    delete_document(db, projectId, filename)
+    return JSONResponse(status_code=204, content=None)

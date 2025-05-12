@@ -1,12 +1,26 @@
+# utils/db.py
+
 import os
 from io import BytesIO
 
-import asyncpg
 from fastapi import UploadFile
 from minio import Minio
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# Database connection settings
-DATABASE_URL = "postgresql://username:password@localhost/dbname"
+# PostgreSQL connection settings
+DB_HOST = os.environ.get("DB_HOST", "localhost")
+DB_PORT = os.environ.get("DB_PORT", "5432")
+DB_NAME = os.environ.get("DB_NAME", "db")
+DB_USER = os.environ.get("DB_USER", "user")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "password")
+
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 # MinIO client settings
 MINIO_URL = os.environ.get("MINIO_URL", "localhost:9000")
@@ -17,6 +31,18 @@ minio_client = Minio(
     secret_key=os.environ.get("MINIO_SECRET_KEY", "minioadmin"),
     secure=False,
 )
+
+
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+Base = declarative_base()
 
 
 async def upload_file_to_minio(bucket_name: str, file: UploadFile, file_name: str):
@@ -36,26 +62,3 @@ async def upload_file_to_minio(bucket_name: str, file: UploadFile, file_name: st
     # Generate the file URL
     file_url = f"http://{MINIO_URL}/{bucket_name}/{file_name}"
     return file_url
-
-
-async def get_db_connection():
-    return await asyncpg.connect(DATABASE_URL)
-
-
-async def save_pdf_to_db(note_id: int, file_name: str, file_url: str):
-    """
-    Save the MinIO file URL to the database.
-    """
-    conn = await get_db_connection()
-    try:
-        await conn.execute(
-            """
-            INSERT INTO documents (note_id, file_name, file_url)
-            VALUES ($1, $2, $3)
-            """,
-            note_id,
-            file_name,
-            file_url,
-        )
-    finally:
-        await conn.close()
