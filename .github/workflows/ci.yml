@@ -1,4 +1,4 @@
-name: Run Build and Test
+name: Test
 
 permissions:
   checks: write
@@ -32,7 +32,7 @@ jobs:
           key: uv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Install dependencies
-        run: uv pip install -r requirements.txt
+        run: uv sync
 
       - name: Create junit directory
         run: mkdir -p junit

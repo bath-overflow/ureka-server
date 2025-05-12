@@ -1,4 +1,4 @@
-name: Deploy to Local Server
+name: Build & Deploy to Local Server
 
 on:
   push:
