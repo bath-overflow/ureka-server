@@ -3,6 +3,7 @@ import uuid
 
 import pytest
 from chromadb import Client
+from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -69,3 +70,12 @@ def override_get_db(db_session):
     from server.main import app  # ✅ 지연 import (핵심)
 
     app.dependency_overrides[get_db] = lambda: db_session
+
+
+@pytest.fixture
+def test_documents():
+    return [
+        Document(page_content="This is a test document.", metadata={"id": "1"}),
+        Document(page_content="This is another test document.", metadata={"id": "2"}),
+        Document(page_content="This is a third test document.", metadata={"id": "3"}),
+    ]
