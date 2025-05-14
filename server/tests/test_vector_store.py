@@ -27,7 +27,7 @@ def test_delete_documents(vector_store, isolated_collection, test_documents):
     assert deleted_doc is None
 
     remaining_doc = vector_store.get_document_by_id(collection_name, ids[1])
-    assert remaining_doc.metadata["id"] == test_documents[1].metadata["id"]
+    assert remaining_doc.metadata["idx"] == test_documents[1].metadata["idx"]
 
 
 def test_search_by_vector(vector_store, isolated_collection, test_documents):
@@ -38,5 +38,5 @@ def test_search_by_vector(vector_store, isolated_collection, test_documents):
     retrieved_docs = vector_store.get_documents_by_vector(collection_name, query_vector)
     assert len(retrieved_docs) >= 1
 
-    ids = [doc.metadata["id"] for doc in test_documents]
-    assert any(doc.metadata["id"] in ids for doc in retrieved_docs)
+    indices = [doc.metadata["idx"] for doc in test_documents]
+    assert any(doc.metadata["idx"] in indices for doc in retrieved_docs)
