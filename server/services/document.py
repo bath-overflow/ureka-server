@@ -1,4 +1,5 @@
 from datetime import timedelta
+from io import BytesIO
 
 from fastapi import HTTPException, UploadFile
 from langchain_core.retrievers import BaseRetriever
@@ -45,14 +46,13 @@ async def upload_and_register_document(
     file_content = await file.read()
     file_size = len(file_content)
 
-    # BUG: Cannot upload file to MinIO
-    # minio_client.put_object(
-    #     bucket_name=bucket_name,
-    #     object_name=file.filename,
-    #     data=BytesIO(file_content),
-    #     length=file_size,
-    #     content_type=file.content_type,
-    # )
+    minio_client.put_object(
+        bucket_name=bucket_name,
+        object_name=file.filename,
+        data=BytesIO(file_content),
+        length=file_size,
+        content_type=file.content_type,
+    )
 
     # 2. VectorStore에 문서 추가
     if file.filename.lower().endswith(".pdf"):
