@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from server.models.hint import HintRequest, HintResponse
+from server.models.hint_model import HintRequest, HintResponse
 from server.services.chat import ChatService
 from server.services.hint import HintService
 
