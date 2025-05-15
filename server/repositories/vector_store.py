@@ -1,10 +1,10 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Sequence
 
 from chromadb import HttpClient
 from chromadb.api import ClientAPI
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import InMemoryVectorStore
 
@@ -14,23 +14,31 @@ from server.services.embedding import huggingface_embeddings
 class VectorStore(ABC):
 
     @abstractmethod
-    def add_documents(self, collection, documents):
+    def add_documents(self, collection, documents, *args, **kwargs) -> list[str]:
         pass
 
     @abstractmethod
-    def get_documents(self, collection, query):
+    def get_documents(
+        self, collection: str, query: str, *args, **kwargs
+    ) -> list[Document]:
         pass
 
     @abstractmethod
-    def get_documents_by_vector(self, collection, vector):
+    def get_documents_by_vector(
+        self, collection: str, vector: list[float], *args, **kwargs
+    ) -> list[Document]:
         pass
 
     @abstractmethod
-    def delete_documents(self, collection, document_ids):
+    def delete_documents(
+        self, collection: str, document_ids: list[str], *args, **kwargs
+    ) -> None:
         pass
 
     @abstractmethod
-    def get_document_by_id(self, collection, document_id):
+    def get_document_by_id(
+        self, collection: str, document_id: str, *args, **kwargs
+    ) -> Document | None:
         pass
 
 
@@ -40,51 +48,62 @@ class MemoryVectorStore(VectorStore):
         self.embedding = embedding
         self.stores = {}
 
-    def _get_or_create_store(self, collection_name):
+    def _get_or_create_store(self, collection_name: str) -> InMemoryVectorStore:
         if collection_name not in self.stores:
             self.stores[collection_name] = InMemoryVectorStore(embedding=self.embedding)
         return self.stores[collection_name]
 
-    def add_documents(self, collection_name, documents: Any) -> Sequence[str]:
+    def add_documents(
+        self, collection_name: str, documents, *args, **kwargs
+    ) -> list[str]:
         store = self._get_or_create_store(collection_name)
-        return store.add_documents(documents)
+        return store.add_documents(documents, *args, **kwargs)
 
-    def get_documents(self, collection_name, query: str) -> Any:
+    def get_documents(
+        self, collection_name: str, query: str, *args, **kwargs
+    ) -> list[Document]:
         store = self._get_or_create_store(collection_name)
-        return store.similarity_search(query)
+        return store.similarity_search(query, *args, **kwargs)
 
     def get_documents_by_vector(
-        self, collection_name, vector: List[float]
-    ) -> List[Dict[str, Any]]:
+        self, collection_name: str, vector: list[float], *args, **kwargs
+    ) -> list[Document]:
         store = self._get_or_create_store(collection_name)
-        return store.similarity_search_by_vector(vector)
+        return store.similarity_search_by_vector(vector, *args, **kwargs)
 
-    def delete_documents(self, collection_name, document_ids: Sequence[str]):
+    def delete_documents(
+        self, collection_name: str, document_ids: list[str], *args, **kwargs
+    ) -> None:
         store = self._get_or_create_store(collection_name)
-        store.delete(document_ids)
+        store.delete(document_ids, *args, **kwargs)
 
-    def get_document_by_id(self, collection_name, document_id: str) -> Any:
+    def get_document_by_id(
+        self, collection_name: str, document_id: str, *args, **kwargs
+    ) -> Document | None:
         store = self._get_or_create_store(collection_name)
-        return store.get_by_ids([document_id])
+        docs = store.get_by_ids([document_id], *args, **kwargs)
+        if docs:
+            return docs[0]
+        return None
 
 
-CRHOMA_HOST = os.environ.get("CHROMA_HOST", "localhost")
+CHROMA_HOST = os.environ.get("CHROMA_HOST", "localhost")
 CHROMA_PORT = os.environ.get("CHROMA_PORT", 8001)
 
 
 class ChromaVectorStore(VectorStore):
-    def __init__(self, embedding: Embeddings, client=None):
+    def __init__(self, embedding: Embeddings, client: ClientAPI = None):
 
         if client is None:
             client: ClientAPI = HttpClient(
-                host=CRHOMA_HOST,
+                host=CHROMA_HOST,
                 port=CHROMA_PORT,
                 ssl=False,
             )
 
         self.embedding = embedding
         self.client = client  # from your previous code
-        self.stores = {}
+        self.stores: dict[str, Chroma] = {}
 
     def _get_or_create_store(self, collection_name):
         if collection_name not in self.stores:
@@ -95,29 +114,36 @@ class ChromaVectorStore(VectorStore):
             )
         return self.stores[collection_name]
 
-    def add_documents(self, collection_name, documents: Any) -> Sequence[str]:
+    def add_documents(self, collection_name, documents, *args, **kwargs) -> list[str]:
         store = self._get_or_create_store(collection_name)
-        return store.add_documents(documents)
+        return store.add_documents(documents, *args, **kwargs)
 
-    def get_documents(self, collection_name, query: str) -> Any:
+    def get_documents(
+        self, collection_name, query: str, *args, **kwargs
+    ) -> list[Document]:
         store = self._get_or_create_store(collection_name)
-        return store.similarity_search(query)
+        return store.similarity_search(query, *args, **kwargs)
 
     def get_documents_by_vector(
-        self, collection_name, vector: List[float]
-    ) -> List[Dict[str, Any]]:
+        self, collection_name, vector: list[float], *args, **kwargs
+    ) -> list[Document]:
         store = self._get_or_create_store(collection_name)
-        return store.similarity_search_by_vector(vector)
+        return store.similarity_search_by_vector(vector, *args, **kwargs)
 
-    def delete_documents(self, collection_name, document_ids: Sequence[str]):
+    def delete_documents(
+        self, collection_name, document_ids: list[str], *args, **kwargs
+    ):
         store = self._get_or_create_store(collection_name)
-        store.delete(document_ids)
+        store.delete(document_ids, *args, **kwargs)
 
-    def get_document_by_id(self, collection_name, document_id: str) -> Any:
+    def get_document_by_id(self, collection_name, document_id: str) -> Document | None:
         store = self._get_or_create_store(collection_name)
-        return store.get_by_ids([document_id])
+        docs = store.get_by_ids([document_id])
+        if docs:
+            return docs[0]
+        return None
 
 
-vector_store = MemoryVectorStore(
+vector_store = ChromaVectorStore(
     embedding=huggingface_embeddings,
 )

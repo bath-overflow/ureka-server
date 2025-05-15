@@ -1,5 +1,4 @@
 from datetime import timedelta
-from io import BytesIO
 
 from fastapi import HTTPException, UploadFile
 from langchain_core.retrievers import BaseRetriever
@@ -12,6 +11,7 @@ from server.repositories.document_store import (
     get_documents_by_project,
 )
 from server.repositories.vector_store import vector_store
+from server.services.vector_store import add_file_to_vector_store
 from server.utils.db import MINIO_URL, minio_client
 
 
@@ -45,17 +45,27 @@ async def upload_and_register_document(
     file_content = await file.read()
     file_size = len(file_content)
 
-    minio_client.put_object(
-        bucket_name=bucket_name,
-        object_name=file.filename,
-        data=BytesIO(file_content),
-        length=file_size,
-        content_type=file.content_type,
-    )
+    # BUG: Cannot upload file to MinIO
+    # minio_client.put_object(
+    #     bucket_name=bucket_name,
+    #     object_name=file.filename,
+    #     data=BytesIO(file_content),
+    #     length=file_size,
+    #     content_type=file.content_type,
+    # )
+
+    # 2. VectorStore에 문서 추가
+    if file.filename.lower().endswith(".pdf"):
+        # Use project_id as the collection name for vector store
+        add_file_to_vector_store(
+            collection_name=project_id,
+            file_content=file_content,
+            file_name=file.filename,
+        )
 
     file_url = f"http://{MINIO_URL}/{bucket_name}/{file.filename}"
 
-    # 2. DB에 문서 저장
+    # 3. DB에 문서 저장
     return create_document(
         db=db,
         project_id=project_id,
