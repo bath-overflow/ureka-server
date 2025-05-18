@@ -10,7 +10,6 @@ junit/
 
 # Virtual environments
 .venv
-*.pdf
 chroma_storage/
 
 .idea
@@ -55,3 +54,6 @@ Temporary Items
 ### macOS Patch ###
 # iCloud generated files
 *.icloud
+
+# unstructured test-related
+unstructured/output_img/*

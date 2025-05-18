@@ -15,14 +15,17 @@ dependencies = [
     "langchain-huggingface>=0.1.2",
     "langchain-openai>=0.3.14",
     "langchain-text-splitters>=0.3.8",
+    "langchain-unstructured>=0.1.6",
     "langgraph>=0.3.34",
     "minio>=7.2.15",
+    "poppler-utils>=0.1.0",
     "psycopg2-binary>=2.9.10",
     "pymongo>=4.12.1",
     "pypdf>=5.4.0",
     "python-multipart>=0.0.20",
     "reportlab>=4.4.0",
     "sqlalchemy>=2.0.40",
+    "unstructured[pdf]>=0.17.2",
     "uvicorn>=0.34.1",
 ]
 
