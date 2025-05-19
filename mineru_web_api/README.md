@@ -32,4 +32,4 @@ README.md에서 설명하는대로 `docker-compose up` 커맨드 사용
 
 ## Usage
 
-Refer to http://127.0.0.1:8000/docs
+Refer to http://127.0.0.1:8888/docs
