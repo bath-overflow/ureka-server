@@ -86,12 +86,7 @@ services:
     ports:
       - "8888:8888"
     volumes:
-      # Optional: Add volume mounts if needed
-      - mineru_data:/app/output  # Example volume mount
-    environment:
-      # Set any environment variables needed by the API
-      - ENVIRONMENT=development
-      # Add other environment variables as needed
+      - mineru_data:/app/output
     restart: unless-stopped
 
 volumes:
