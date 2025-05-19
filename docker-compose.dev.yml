@@ -80,9 +80,23 @@ services:
     ports:
       - "8001:8000"
 
+  mineru-web-api:
+    image: myungjune/mineru-web-api-capstone:cpu
+    container_name: mineru-web-api
+    ports:
+      - "8888:8888"
+    volumes:
+      # Optional: Add volume mounts if needed
+      - mineru_data:/app/output  # Example volume mount
+    environment:
+      # Set any environment variables needed by the API
+      - ENVIRONMENT=development
+      # Add other environment variables as needed
+    restart: unless-stopped
 
 volumes:
   postgres_data:
   minio_data:
   chroma_data:
   mongo_data:
+  mineru_data:
