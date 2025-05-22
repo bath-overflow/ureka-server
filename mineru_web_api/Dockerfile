@@ -20,19 +20,16 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Download models
-COPY download_models.py .
-RUN python -m venv /app/venv && \
+RUN --mount=type=bind,source=download_models.py,target=download_models.py \
+    python -m venv /app/venv && \
     . /app/venv/bin/activate && \
     pip install huggingface_hub && \
     ./download_models.py
 
 # Build Python dependencies
-COPY requirements.txt .
-RUN . /app/venv/bin/activate && \
+RUN --mount=type=bind,source=requirements.txt,target=requirements.txt \
+    . /app/venv/bin/activate && \
     pip install -r requirements.txt
-#     pip uninstall -y paddlepaddle && \
-#     pip install -i https://www.paddlepaddle.org.cn/packages/stable/cu118/ \
-#         paddlepaddle-gpu==3.0.0rc1
 
 FROM base AS prod
 
@@ -49,10 +46,6 @@ RUN apt-get update && \
         libgomp1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# Create volume for paddleocr models
-# RUN mkdir -p /root/.paddleocr
-# VOLUME [ "/root/.paddleocr" ]
 
 # Copy the app and its configuration file
 COPY entrypoint.sh /app/entrypoint.sh
