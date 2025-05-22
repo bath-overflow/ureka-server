@@ -1,29 +1,52 @@
-import json
 import os
 import tempfile
-from base64 import b64encode
-from glob import glob
-from io import StringIO
-from typing import Tuple, Union
+from io import BytesIO, StringIO
+from typing import Annotated, Tuple
 
 import magic_pdf.model as model_config
 import uvicorn
-from fastapi import FastAPI, Form, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
+from langchain_core.documents import Document
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 from loguru import logger
 from magic_pdf.config.enums import SupportedPdfParseMethod
-from magic_pdf.data.data_reader_writer import DataWriter, FileBasedDataWriter
-from magic_pdf.data.data_reader_writer.s3 import S3DataReader, S3DataWriter
+from magic_pdf.data.data_reader_writer import DataWriter
 from magic_pdf.data.dataset import ImageDataset, PymuDocDataset
 from magic_pdf.data.read_api import read_local_images, read_local_office
-from magic_pdf.libs.config_reader import get_bucket_name, get_s3_config
 from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
 from magic_pdf.operators.models import InferenceResult
 from magic_pdf.operators.pipes import PipeResult
+from minio import Minio
+from vector_store import vector_store
 
 model_config.__use_inside_model__ = True
 
 app = FastAPI()
+
+# MinIO configuration
+MINIO_URL = os.environ.get("MINIO_ENDPOINT", "localhost:9000")
+IS_PROD = os.getenv("ENVIRONMENT") == "production"
+
+if IS_PROD:
+    MINIO_URL = "minio.cspc.me"
+
+MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "minioadmin")
+
+minio_client = Minio(
+    MINIO_URL,
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
+    secure=IS_PROD,
+)
+
+
+# Ensure buckets exist
+def ensure_bucket_exists(bucket_name: str):
+    if not minio_client.bucket_exists(bucket_name):
+        minio_client.make_bucket(bucket_name)
+
 
 pdf_extensions = [".pdf"]
 office_extensions = [".ppt", ".pptx", ".doc", ".docx"]
@@ -50,259 +73,227 @@ class MemoryDataWriter(DataWriter):
         self.buffer.close()
 
 
+class MinioDataWriter(DataWriter):
+    """Data writer implementation for MinIO storage"""
+
+    def __init__(self, bucket_name: str):
+        self.bucket_name = bucket_name
+        ensure_bucket_exists(bucket_name)
+
+    def write(self, path: str, data: bytes) -> None:
+        """
+        Write data to MinIO storage
+        Args:
+            path: Object name in the bucket
+            data: Data to be written
+        """
+        if isinstance(data, str):
+            data_bytes = data.encode("utf-8")
+        else:
+            data_bytes = data
+
+        minio_client.put_object(
+            bucket_name=self.bucket_name,
+            object_name=path,
+            data=BytesIO(data_bytes),
+            length=len(data_bytes),
+        )
+
+    def write_string(self, path: str, data: str) -> None:
+        """
+        Write string data to MinIO storage
+        Args:
+            path: Object name in the bucket
+            data: String data to be written
+        """
+        data_bytes = data.encode("utf-8")
+        minio_client.put_object(
+            bucket_name=self.bucket_name,
+            object_name=path,
+            data=BytesIO(data_bytes),
+            length=len(data_bytes),
+            content_type="text/plain",
+        )
+
+
 def init_writers(
-    file_path: str = None,
-    file: UploadFile = None,
-    output_path: str = None,
-    output_image_path: str = None,
-) -> Tuple[
-    Union[S3DataWriter, FileBasedDataWriter],
-    Union[S3DataWriter, FileBasedDataWriter],
-    bytes,
-]:
+    file: UploadFile,
+    project_id: str,
+) -> Tuple[DataWriter, DataWriter, bytes, str]:
     """
     Initialize writers based on path type
 
     Args:
-        file_path: file path (local path or S3 path)
         file: Uploaded file object
-        output_path: Output directory path
-        output_image_path: Image output directory path
+        project_id: Project ID of the file
 
     Returns:
-        Tuple[writer, image_writer, file_bytes]: Returns initialized writer tuple and
-        file content
+        Tuple[md_writer, image_writer, file_bytes, file_extension]
     """
-    file_extension: str = None
-    if file_path:
-        is_s3_path = file_path.startswith("s3://")
-        if is_s3_path:
-            bucket = get_bucket_name(file_path)
-            ak, sk, endpoint = get_s3_config(bucket)
+    # Read the uploaded file content
+    file_bytes = file.file.read()
+    if file.filename is None:
+        raise ValueError("File name is missing.")
+    file_extension = os.path.splitext(file.filename)[1].lower()
 
-            writer = S3DataWriter(
-                output_path, bucket=bucket, ak=ak, sk=sk, endpoint_url=endpoint
-            )
-            image_writer = S3DataWriter(
-                output_image_path, bucket=bucket, ak=ak, sk=sk, endpoint_url=endpoint
-            )
-            # 临时创建reader读取文件内容
-            temp_reader = S3DataReader(
-                "", bucket=bucket, ak=ak, sk=sk, endpoint_url=endpoint
-            )
-            file_bytes = temp_reader.read(file_path)
-            file_extension = os.path.splitext(file_path)[1]
-        else:
-            writer = FileBasedDataWriter(output_path)
-            image_writer = FileBasedDataWriter(output_image_path)
-            os.makedirs(output_image_path, exist_ok=True)
-            with open(file_path, "rb") as f:
-                file_bytes = f.read()
-            file_extension = os.path.splitext(file_path)[1]
-    else:
-        # 处理上传的文件
-        file_bytes = file.file.read()
-        file_extension = os.path.splitext(file.filename)[1]
+    # Create writers for "markdowns" and "images" buckets
+    markdown_writer = MinioDataWriter("markdowns")
+    image_writer = MinioDataWriter("images")
 
-        writer = FileBasedDataWriter(output_path)
-        image_writer = FileBasedDataWriter(output_image_path)
-        os.makedirs(output_image_path, exist_ok=True)
-
-    return writer, image_writer, file_bytes, file_extension
+    return markdown_writer, image_writer, file_bytes, file_extension
 
 
 def process_file(
     file_bytes: bytes,
     file_extension: str,
-    parse_method: str,
-    image_writer: Union[S3DataWriter, FileBasedDataWriter],
-) -> Tuple[InferenceResult, PipeResult]:
+    image_writer: DataWriter,
+) -> tuple[InferenceResult, PipeResult]:
     """
     Process PDF file content
 
     Args:
         file_bytes: Binary content of file
         file_extension: file extension
-        parse_method: Parse method ('ocr', 'txt', 'auto')
         image_writer: Image writer
 
     Returns:
         Tuple[InferenceResult, PipeResult]: Returns inference result and pipeline result
     """
 
-    ds: Union[PymuDocDataset, ImageDataset] = None
+    ds: ImageDataset | PymuDocDataset | None = None
     if file_extension in pdf_extensions:
         ds = PymuDocDataset(file_bytes)
     elif file_extension in office_extensions:
-        # 需要使用office解析
+        # Process Office files
         temp_dir = tempfile.mkdtemp()
         with open(os.path.join(temp_dir, f"temp_file.{file_extension}"), "wb") as f:
             f.write(file_bytes)
         ds = read_local_office(temp_dir)[0]
     elif file_extension in image_extensions:
-        # 需要使用ocr解析
+        # Process image files
         temp_dir = tempfile.mkdtemp()
         with open(os.path.join(temp_dir, f"temp_file.{file_extension}"), "wb") as f:
             f.write(file_bytes)
         ds = read_local_images(temp_dir)[0]
-    infer_result: InferenceResult = None
-    pipe_result: PipeResult = None
 
-    if parse_method == "ocr":
+    if ds is None:
+        raise ValueError("Unsupported file type or failed to read file.")
+
+    infer_result: InferenceResult | None = None
+    pipe_result: PipeResult | None = None
+
+    if ds.classify() == SupportedPdfParseMethod.OCR:
         infer_result = ds.apply(doc_analyze, ocr=True)
+        if infer_result is None:
+            raise ValueError("Failed to parse document (OCR).")
         pipe_result = infer_result.pipe_ocr_mode(image_writer)
-    elif parse_method == "txt":
+    else:
         infer_result = ds.apply(doc_analyze, ocr=False)
+        if infer_result is None:
+            raise ValueError("Failed to parse document (non-OCR).")
         pipe_result = infer_result.pipe_txt_mode(image_writer)
-    else:  # auto
-        if ds.classify() == SupportedPdfParseMethod.OCR:
-            infer_result = ds.apply(doc_analyze, ocr=True)
-            pipe_result = infer_result.pipe_ocr_mode(image_writer)
-        else:
-            infer_result = ds.apply(doc_analyze, ocr=False)
-            pipe_result = infer_result.pipe_txt_mode(image_writer)
 
     return infer_result, pipe_result
 
 
-def encode_image(image_path: str) -> str:
-    """Encode image using base64"""
-    with open(image_path, "rb") as f:
-        return b64encode(f.read()).decode()
+def split_markdown_into_documents(
+    markdown_content: str, source_name: str
+) -> list[Document]:
+    """
+    Split markdown content into LangChain Document objects using headers.
+
+    Args:
+        markdown_content: The markdown content to split
+        source_name: Name to use as the source in document metadata
+
+    Returns:
+        List of Document objects
+    """
+    # Define headers to split on
+    headers_to_split_on = [
+        ("#", "header1"),
+        ("##", "header2"),
+        ("###", "header3"),
+        ("####", "header4"),
+    ]
+
+    # Create the splitter
+    markdown_splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=headers_to_split_on,
+    )
+
+    # Split the markdown content
+    docs = markdown_splitter.split_text(markdown_content)
+
+    # Add source metadata
+    for doc in docs:
+        doc.metadata["source"] = source_name
+
+    return docs
 
 
 @app.post(
     "/file_parse",
-    tags=["projects"],
-    summary="Parse files (supports local files and S3)",
+    summary="Parse file and return markdown content",
 )
 async def file_parse(
-    file: UploadFile = None,
-    file_path: str | None = Form(None),
-    parse_method: str = Form("auto"),
-    is_json_md_dump: bool = Form(False),
-    output_dir: str = Form("output"),
-    return_layout: bool = Form(False),
-    return_info: bool = Form(False),
-    return_content_list: bool = Form(False),
-    return_images: bool = Form(False),
+    file: Annotated[UploadFile, File()],
+    project_id: Annotated[str, Form()],
 ):
     """
-    Execute the process of converting PDF to JSON and MD, outputting MD and JSON files
-    to the specified directory.
+    Execute the process of converting a document file to markdown content.
+    Also saves the content to vector store for later retrieval.
 
     Args:
-        file: The PDF file to be parsed. Must not be specified together with
-            `file_path`
-        file_path: The path to the PDF file to be parsed. Must not be specified together
-            with `file`
-        parse_method: Parsing method, can be auto, ocr, or txt. Default is auto. If
-            results are not satisfactory, try ocr
-        is_json_md_dump: Whether to write parsed data to .json and .md files. Default
-            to False. Different stages of data will be written to different .json files
-            (3 in total), md content will be saved to .md file
-        output_dir: Output directory for results. A folder named after the PDF file
-            will be created to store all results
-        return_layout: Whether to return parsed PDF layout. Default to False
-        return_info: Whether to return parsed PDF info. Default to False
-        return_content_list: Whether to return parsed PDF content list. Default to False
+        file: The file to be parsed (PDF, Office document, or image)
+        project_id: Project ID for the file
     """
+    if file.filename is None:
+        return JSONResponse({"error": "File name is missing."}, status_code=400)
+
     try:
-        if (file is None and file_path is None) or (
-            file is not None and file_path is not None
-        ):
-            return JSONResponse(
-                content={"error": "Must provide either file or file_path"},
-                status_code=400,
-            )
-
-        # Get PDF filename
-        file_name = os.path.basename(file_path if file_path else file.filename).split(
-            "."
-        )[0]
-        output_path = f"{output_dir}/{file_name}"
-        output_image_path = f"{output_path}/images"
-
-        # Initialize readers/writers and get PDF content
-        writer, image_writer, file_bytes, file_extension = init_writers(
-            file_path=file_path,
-            file=file,
-            output_path=output_path,
-            output_image_path=output_image_path,
+        # Initialize readers/writers and get file content
+        md_writer, image_writer, file_bytes, file_extension = init_writers(
+            file=file, project_id=project_id
         )
 
-        # Process PDF
+        # Process the file
         infer_result, pipe_result = process_file(
-            file_bytes, file_extension, parse_method, image_writer
+            file_bytes, file_extension, image_writer
         )
 
         # Use MemoryDataWriter to get results
-        content_list_writer = MemoryDataWriter()
         md_content_writer = MemoryDataWriter()
-        middle_json_writer = MemoryDataWriter()
 
         # Use PipeResult's dump method to get data
-        pipe_result.dump_content_list(content_list_writer, "", "images")
-        pipe_result.dump_md(md_content_writer, "", "images")
-        pipe_result.dump_middle_json(middle_json_writer, "")
+        pipe_result.dump_md(md_content_writer, "", "")
 
         # Get content
-        content_list = json.loads(content_list_writer.get_value())
         md_content = md_content_writer.get_value()
-        middle_json = json.loads(middle_json_writer.get_value())
-        model_json = infer_result.get_infer_res()
 
-        # If results need to be saved
-        if is_json_md_dump:
-            writer.write_string(
-                f"{file_name}_content_list.json", content_list_writer.get_value()
-            )
-            writer.write_string(f"{file_name}.md", md_content)
-            writer.write_string(
-                f"{file_name}_middle.json", middle_json_writer.get_value()
-            )
-            writer.write_string(
-                f"{file_name}_model.json",
-                json.dumps(model_json, indent=4, ensure_ascii=False),
-            )
-            # Save visualization results
-            pipe_result.draw_layout(
-                os.path.join(output_path, f"{file_name}_layout.pdf")
-            )
-            pipe_result.draw_span(os.path.join(output_path, f"{file_name}_spans.pdf"))
-            pipe_result.draw_line_sort(
-                os.path.join(output_path, f"{file_name}_line_sort.pdf")
-            )
-            infer_result.draw_model(os.path.join(output_path, f"{file_name}_model.pdf"))
-
-        # Build return data
-        data = {}
-        if return_layout:
-            data["layout"] = model_json
-        if return_info:
-            data["info"] = middle_json
-        if return_content_list:
-            data["content_list"] = content_list
-        if return_images:
-            image_paths = glob(f"{output_image_path}/*.jpg")
-            data["images"] = {
-                os.path.basename(
-                    image_path
-                ): f"data:image/jpeg;base64,{encode_image(image_path)}"
-                for image_path in image_paths
-            }
-        data["md_content"] = md_content  # md_content is always returned
+        # Save markdown content to MinIO
+        file_name_without_ext = os.path.splitext(file.filename)[0]
+        markdown_path = f"{project_id}/{file_name_without_ext}.md"
+        md_writer.write_string(markdown_path, md_content)
 
         # Clean up memory writers
-        content_list_writer.close()
         md_content_writer.close()
-        middle_json_writer.close()
 
-        return JSONResponse(data, status_code=200)
+        # Split markdown into documents
+        docs = split_markdown_into_documents(md_content, source_name=file.filename)
+
+        # Add documents to vector store
+        doc_ids = vector_store.add_documents(project_id, docs)
+        logger.info(
+            f"Added {len(doc_ids)} document chunks to vector store collection "
+            + project_id
+        )
+
+        return JSONResponse({"md_content": md_content}, status_code=200)
 
     except Exception as e:
         logger.exception(e)
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 if __name__ == "__main__":

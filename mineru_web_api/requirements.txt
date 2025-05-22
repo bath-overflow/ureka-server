@@ -3,3 +3,9 @@ magic-pdf[full]
 fastapi
 uvicorn
 python-multipart
+
+minio
+langchain-core
+langchain-chroma
+langchain-huggingface
+langchain-text-splitters

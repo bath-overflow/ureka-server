@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bookworm AS base
+FROM python:3.12-slim-bookworm AS base
 
 WORKDIR /app
 
@@ -19,20 +19,20 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Build Python dependencies
-COPY requirements.txt .
+# Download models
+COPY download_models.py .
 RUN python -m venv /app/venv && \
     . /app/venv/bin/activate && \
+    pip install huggingface_hub && \
+    ./download_models.py
+
+# Build Python dependencies
+COPY requirements.txt .
+RUN . /app/venv/bin/activate && \
     pip install -r requirements.txt
 #     pip uninstall -y paddlepaddle && \
 #     pip install -i https://www.paddlepaddle.org.cn/packages/stable/cu118/ \
 #         paddlepaddle-gpu==3.0.0rc1
-
-# Download models
-COPY download_models.py .
-RUN . /app/venv/bin/activate && \
-    ./download_models.py
-
 
 FROM base AS prod
 
@@ -57,7 +57,7 @@ RUN apt-get update && \
 # Copy the app and its configuration file
 COPY entrypoint.sh /app/entrypoint.sh
 COPY magic-pdf.json /root/magic-pdf.json
-COPY app.py /app/app.py
+COPY app.py embeddings.py vector_store.py /app/
 
 # Expose the port that FastAPI will run on
 EXPOSE 8888

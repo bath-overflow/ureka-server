@@ -12,21 +12,27 @@
 source build_script.sh
 ```
 
+To build locally,
+
+```
+source build_local.sh
+```
+
 ## Start command
 
 - GPU
 
 ```bash
-docker run --rm -it --gpus=all -p 8888:8888 mineru-api
+docker run --rm -it --gpus=all -p 8888:8888 myungjune/mineru-web-api-capstone:latest
 ```
 
 - CPU
 
 ```bash
-docker run --rm -it -p 8888:8888 mineru-api
+docker run --rm -it -p 8888:8888 myungjune/mineru-web-api-capstone:cpu
 ```
 
-- docker-compose.ev.yml 이용하는 경우
+- docker-compose.env.yml 이용하는 경우
 
 README.md에서 설명하는대로 `docker-compose up` 커맨드 사용
 
