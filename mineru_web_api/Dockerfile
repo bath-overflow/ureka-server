@@ -57,7 +57,7 @@ RUN apt-get update && \
 # Copy the app and its configuration file
 COPY entrypoint.sh /app/entrypoint.sh
 COPY magic-pdf.json /root/magic-pdf.json
-COPY app.py embeddings.py vector_store.py /app/
+COPY app/ /app/
 
 # Expose the port that FastAPI will run on
 EXPOSE 8888
