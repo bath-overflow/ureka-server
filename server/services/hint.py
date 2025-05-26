@@ -19,9 +19,36 @@ from server.services.prompt import PromptService
 from datetime import datetime
 from server.models.chat_model import ChatMessage, ChatHistory
 
+# 테스트용 ChatHistory 생성
+test_chat_history = ChatHistory(
+    id="123",
+    messages=[
+        ChatMessage(
+            role="user",
+            message="What is TCP?",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="assistant",
+            message="Can you describe what TCP does in the network stack?",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="user",
+            message="TCP does 3-way handshake and controls congestion.",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="assistant",
+            message="Can you explain how congestion control works in TCP?",
+            created_at=datetime.utcnow().isoformat(),
+        )
+    ],
+)
+
 # --- State Definition ---
 class State(TypedDict):
-    user_query: Optional[str]
+    prev_question: Optional[str]
     initial_answer: Optional[str]
     messages: Annotated[list[AnyMessage], add_messages]
     collection_name: Optional[str]
@@ -98,24 +125,7 @@ class HintService:
             raise ValueError("Collection name not found in state")
 
         # Get chat history from ChatService
-        from server.routers.chat import chat_service
-        
-        chat_history = chat_service.get_history(collection_name)
-        if chat_history is None:
-            print(f"Error: No chat history found for collection '{collection_name}'")
-            raise ValueError(
-                f"No chat history found for collection '{collection_name}'"
-            )
-
-        # Add chat history messages to the state
-        messages = [
-            (
-                HumanMessage(content=chat_msg.message)
-                if chat_msg.role == "user"
-                else AIMessage(content=chat_msg.message)
-            )
-            for chat_msg in chat_history.messages
-        ]
+        messages, _ = self._get_messages_and_last_ai_question(collection_name)
 
         print(f"--- Loaded {len(messages)} messages from chat history ---")
         return {"messages": messages}
@@ -125,9 +135,9 @@ class HintService:
         Given the query, decide whether to retrieve documents or use LLM knowledge.
         """
         print("--- Pre-retrieve: Analyzing query ---")
-        user_query = state.get("user_query")
-        if not user_query:
-            print("Error: No user query found in state for pre_retrieve")
+        prev_question = state.get("prev_question")
+        if not prev_question:
+            print("Error: No previous question found in state for pre_retrieve")
             raise ValueError("User query not found in state")
 
         collection_name = state.get("collection_name")
@@ -146,7 +156,7 @@ class HintService:
             "context from documents.\n",
             "If document retrieval is needed, call the retrieve tool with a",
             "well-formed search query.\n\n",
-            f"Question: {user_query}\n\n",
+            f"Question: {prev_question}\n\n",
             "Think carefully - if this is a question about specific information that",
             "might be in the uploaded documents,",
             "use the retrieve tool. If it's general knowledge or doesn't require",
@@ -158,10 +168,10 @@ class HintService:
 
     def _generate_initial_answer(self, state: State) -> Dict[str, str]:
         """Generate the initial concise answer to the user's query."""
-        user_query = state.get("user_query")
-        if not user_query:
-            print("Error: user_query not found in state for generate_initial_answer")
-            raise ValueError("User query not found in state")
+        prev_question = state.get("prev_question")
+        if not prev_question:
+            print("Error: prev_question not found in state for generate_initial_answer")
+            raise ValueError("Previous question not found in state")
 
         # Check if there are tool messages (retrieval results)
         recent_tool_messages = []
@@ -187,7 +197,7 @@ class HintService:
 
         # Generate initial answer
         prompt_template = self.prompt_service.get_prompt("genai_query_prompt.txt")
-        msg_content = prompt_template + f"\n\n{user_query}\n\n{docs_content}"
+        msg_content = prompt_template + f"\n\n{prev_question}\n\n{docs_content}"
         response = llm.invoke([HumanMessage(content=msg_content)])
         answer = response.content
 
@@ -200,12 +210,12 @@ class HintService:
         results.
         """
         print("--- Teacher: Generating Response with Context ---")
-        user_query = state.get("user_query")
+        prev_question = state.get("prev_question")
         initial_answer = state.get("initial_answer")
 
-        if not user_query or not initial_answer:
+        if not prev_question or not initial_answer:
             print(
-                "Error: missing user_query or initial_answer in generate_final_answer"
+                "Error: missing prev_question or initial_answer in generate_final_answer"
             )
             raise ValueError("Missing required state elements")
 
@@ -231,7 +241,7 @@ class HintService:
             docs_content = f"<reference>{docs_content}</reference>\n"
 
         template = self.prompt_service.get_prompt("hint_prompt.txt")
-        template += f"<query>{user_query}</query>\n"
+        template += f"<query>{prev_question}</query>\n"
         template += f"<answer>{initial_answer}</answer>\n"
         template += docs_content
 
@@ -311,23 +321,57 @@ class HintService:
         )
         return "generate_initial_answer"
 
+    def _get_messages_and_last_ai_question(self, chat_id: str) -> tuple[list[AnyMessage], str]:
+        """
+        Fetch chat history and return LangChain message list and last AI question.
+        """
+        from server.routers.chat import chat_service
+
+        chat_history = test_chat_history
+        #chat_history = chat_service.get_history(chat_id)
+        if chat_history is None:
+            raise ValueError(f"No chat history found for collection '{chat_id}'")
+
+        # Convert to messages
+        messages = [
+            HumanMessage(content=msg.message) if msg.role == "user" else AIMessage(content=msg.message)
+            for msg in chat_history.messages
+        ]
+
+        if not messages:
+            raise ValueError("Chat history is empty")
+
+        # Get the most recent AI message (used as prev_question)
+        prev_question = None
+        for msg in reversed(messages):
+            if isinstance(msg, AIMessage):
+                prev_question = msg.content
+                break
+
+        if not prev_question:
+            raise ValueError("No previous AI question found in chat history")
+
+        return messages, prev_question
+
     async def stream_chat_response(
-        self, chat_id: str, prev_question: str
+        self, chat_id: str
     ) -> AsyncGenerator[str, None]:
         """
         Stream responses from the AI.
 
         Args:
             chat_id: Identifier for the chat/collection
-            prev_question: Previous question from the llm
 
         Yields:
             Tokens from the AI response as they're generated
         """
         try:
+            # Get previous question from llm
+            messages, prev_question = self._get_messages_and_last_ai_question(chat_id)
+            
             # Prepare input for the graph
             stream_input = {
-                "user_query": prev_question,
+                "prev_question": prev_question,
                 "collection_name": chat_id,
                 "messages": [HumanMessage(content=prev_question)],
             }
@@ -359,15 +403,14 @@ hint_service = HintService()
 
 
 async def stream_hint_response(
-    chat_id: str, prev_question: str
+    chat_id: str
 ) -> AsyncGenerator[str, None]:
     """
     Stream chat responses from the HinthService.
     Args:
         chat_id: Identifier for the chat/collection
-        prev_question: Previous question from the llm
     Yields:
         Tokens from the AI response as they're generated
     """
-    async for token in hint_service.stream_chat_response(chat_id, prev_question):
+    async for token in hint_service.stream_chat_response(chat_id):
         yield token
