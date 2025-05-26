@@ -50,22 +50,6 @@ class MinioDataWriter(DataWriter):
             length=len(data_bytes),
         )
 
-    def write_string(self, path: str, data: str) -> None:
-        """
-        Write string data to MinIO storage
-        Args:
-            path: Object name in the bucket
-            data: String data to be written
-        """
-        data_bytes = data.encode("utf-8")
-        minio_client.put_object(
-            bucket_name=self.bucket_name,
-            object_name=path,
-            data=BytesIO(data_bytes),
-            length=len(data_bytes),
-            content_type="text/plain",
-        )
-
 
 markdown_writer = MinioDataWriter("markdowns")
 image_writer = MinioDataWriter("images")
