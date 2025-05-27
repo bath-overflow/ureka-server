@@ -299,7 +299,7 @@ class HintService:
         Fetch chat history and return LangChain message list and last AI question.
         """
         from server.routers.chat import chat_service
-
+        
         chat_history = chat_service.get_history(chat_id)
         if chat_history is None:
             raise ValueError(f"No chat history found for collection '{chat_id}'")
@@ -325,64 +325,40 @@ class HintService:
 
         return messages, prev_question
 
-    async def stream_chat_response(
+    async def generate_hint_response(
         self, chat_id: str
-    ) -> AsyncGenerator[str, None]:
+    ) -> str:
         """
-        Stream responses from the AI.
-
+        Generate hint responses from the AI.
         Args:
             chat_id: Identifier for the chat/collection
-
         Yields:
-            Tokens from the AI response as they're generated
+            The full generated hint response as a string.
         """
         try:
             # Get previous question from llm
             messages, prev_question = self._get_messages_and_last_ai_question(chat_id)
             
             # Prepare input for the graph
-            stream_input = {
+            graph_input = {
                 "prev_question": prev_question,
                 "collection_name": chat_id,
-                "messages": [HumanMessage(content=prev_question)],
+                "messages": messages,
             }
 
-            # Stream the response from the graph with token-by-token streaming
-            current_node = None
-            async for chunk, metadata in self.graph.astream(
-                stream_input,
-                stream_mode="messages",  # Stream token by token
-            ):
-                current_node = metadata["langgraph_node"]
+            # Run the graph fully (non-streaming)
+            final_state = await self.graph.ainvoke(graph_input)
 
-                # Only stream tokens from the generate_final_answer node
-                if current_node == "generate_hint" and isinstance(
-                    chunk, AIMessage
-                ):
-                    # For token-by-token streaming, the content is the new token
-                    yield chunk.content
+            # Extract final message (typically from generate_hint)
+            messages = final_state.get("messages", [])
+            for message in reversed(messages):
+                if isinstance(message, AIMessage):
+                    return message.content.strip()
+
+            return "[No hint response generated.]"
 
         except Exception as e:
-            error_msg = f"Error in stream_chat_response: {str(e)}"
+            error_msg = f"Error in generate_chat_response: {str(e)}"
             print(f"Error processing message for chat {chat_id}: {e}")
             traceback.print_exc()
-            yield f"[ERROR: {error_msg}]"
-
-
-# Create a singleton instance
-hint_service = HintService()
-
-
-async def stream_hint_response(
-    chat_id: str
-) -> AsyncGenerator[str, None]:
-    """
-    Stream chat responses from the HinthService.
-    Args:
-        chat_id: Identifier for the chat/collection
-    Yields:
-        Tokens from the AI response as they're generated
-    """
-    async for token in hint_service.stream_chat_response(chat_id):
-        yield token
+            return f"[ERROR: {error_msg}]"
