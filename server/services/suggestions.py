@@ -32,30 +32,30 @@ test_chat_history = ChatHistory(
             message="Can you explain how congestion control works in TCP?",
             created_at=datetime.utcnow().isoformat(),
         )
-    ],
+    ]
 )
 
 
-class RecommendState(TypedDict):
+class SuggestionState(TypedDict):
     collection_name: str
     messages: List[AnyMessage]
-    recommended_questions: Optional[List[str]]
+    suggested_questions: Optional[List[str]]
 
-class RecommendService:
+class SuggestionService:
     def __init__(self):
         self.graph = self._build_graph()
         self.prompt_service = PromptService()
 
     def _build_graph(self):
-        graph = StateGraph(RecommendState)
+        graph = StateGraph(SuggestionState)
         graph.add_node("load_chat_history", self._load_chat_history)
-        graph.add_node("generate_recommendations", self._generate_recommendations)
+        graph.add_node("generate_suggestions", self._generate_suggestions)
         graph.set_entry_point("load_chat_history")
-        graph.add_edge("load_chat_history", "generate_recommendations")
-        graph.add_edge("generate_recommendations", END)
+        graph.add_edge("load_chat_history", "generate_suggestions")
+        graph.add_edge("generate_suggestions", END)
         return graph.compile()
 
-    def _load_chat_history(self, state: RecommendState) -> Dict:
+    def _load_chat_history(self, state: SuggestionState) -> Dict:
         collection_name = state.get("collection_name")
         chat_history = test_chat_history
         #chat_history = chat_service.get_history(collection_name)
@@ -70,16 +70,16 @@ class RecommendService:
 
         return {"messages": messages}
 
-    def _generate_recommendations(self, state: RecommendState) -> Dict:
+    def _generate_suggestions(self, state: SuggestionState) -> Dict:
         messages = state.get("messages", [])
         history_str = self._format_history(messages)
 
-        prompt_template = self.prompt_service.get_prompt("recommend_prompt.txt")
+        prompt_template = self.prompt_service.get_prompt("suggestion_prompt.txt")
         full_prompt = prompt_template + f"\n\n{history_str}"
 
         response = llm.invoke([HumanMessage(content=full_prompt)])
         lines = [line.strip("- ") for line in response.content.strip().split("\n") if line.strip()]
-        return {"recommended_questions": lines}
+        return {"suggested_questions": lines}
 
     def _format_history(self, messages: List[AnyMessage]) -> str:
         history = ""
