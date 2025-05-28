@@ -273,7 +273,6 @@ class LangGraphService:
         full_prompt = "\n".join(
             [
                 instruction,
-                f"<query>{user_query}</query>",
                 f"<answer>{initial_answer}</answer>",
                 docs_content,
                 history + "[Teacher]: ",
