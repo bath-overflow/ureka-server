@@ -109,3 +109,8 @@ def delete_document(db: Session, project_id: str, filename: str):
     # DB에서 삭제
     delete_document_by_filename(db, project_id, filename)
     return {"message": "Document deleted successfully", "id": document.id}
+
+def get_relevant_docs_text(collection_name: str, query: str) -> str:
+    retriever = DocumentRetriever(collection_name)
+    docs = retriever.get_relevant_documents(query)
+    return "\n".join([doc.page_content for doc in docs])

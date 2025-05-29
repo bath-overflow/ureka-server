@@ -1,14 +1,16 @@
-from typing import Dict, List, Literal, Optional, TypedDict
+from typing import Dict, List, Optional, TypedDict
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langchain_core.messages import AIMessage, HumanMessage, AnyMessage
+from datetime import datetime
+
 from server.routers.chat import chat_service
 from server.services.llm import llm
-from datetime import datetime
 from server.services.prompt import PromptService
+from server.services.document import get_relevant_docs_text
 from server.models.chat_model import ChatMessage, ChatHistory
 
-# 테스트용 ChatHistory 생성
+# 테스트용 chat history
 test_chat_history = ChatHistory(
     id="123",
     messages=[
@@ -35,6 +37,14 @@ test_chat_history = ChatHistory(
     ]
 )
 
+# 테스트용 lecture text
+test_lecture_text = """
+TCP (Transmission Control Protocol) is a core protocol of the Internet protocol suite. 
+It originated in the initial network implementation in which it complemented the Internet Protocol (IP). 
+Therefore, the entire suite is commonly referred to as TCP/IP. 
+TCP provides reliable, ordered, and error-checked delivery of a stream of data between applications running on hosts communicating via an IP network.
+"""
+
 
 class SuggestionState(TypedDict):
     collection_name: str
@@ -57,10 +67,11 @@ class SuggestionService:
 
     def _load_chat_history(self, state: SuggestionState) -> Dict:
         collection_name = state.get("collection_name")
-        chat_history = test_chat_history
-        #chat_history = chat_service.get_history(collection_name)
-        if chat_history is None:
-            raise ValueError(f"No chat history found for '{collection_name}'")
+        #chat_history = test_chat_history  
+        chat_history = chat_service.get_history(collection_name)
+
+        if chat_history is None or not chat_history.messages:
+            return {"messages": [], "collection_name": collection_name}
 
         messages = [
             HumanMessage(content=msg.message)
@@ -68,18 +79,54 @@ class SuggestionService:
             for msg in chat_history.messages
         ]
 
-        return {"messages": messages}
+        return {"messages": messages, "collection_name": collection_name}
 
     def _generate_suggestions(self, state: SuggestionState) -> Dict:
         messages = state.get("messages", [])
+        collection_name = state.get("collection_name")
+
+        if not messages:
+            # Lecture-based suggestion (no chat history)
+            return self._suggest_from_lecture(collection_name)
+        else:
+            # Chat history-based suggestion
+            return self._suggest_from_chat(messages)
+
+    def _suggest_from_chat(self, messages: List[AnyMessage]) -> Dict:
         history_str = self._format_history(messages)
 
-        prompt_template = self.prompt_service.get_prompt("suggestion_prompt.txt")
+        prompt_template = self.prompt_service.get_prompt("suggestion_chat_prompt.txt")
         full_prompt = prompt_template + f"\n\n{history_str}"
 
         response = llm.invoke([HumanMessage(content=full_prompt)])
-        lines = [line.strip("- ") for line in response.content.strip().split("\n") if line.strip()]
-        return {"suggested_questions": lines}
+        questions = [line.strip("- ").strip() for line in response.content.strip().split("\n") if line.strip()]
+        return {"suggested_questions": questions}
+
+    def _suggest_from_lecture(self, collection_name: str) -> Dict:
+        summary = self._summarize_lecture(collection_name)
+        questions = self._generate_questions_from_summary(summary)
+        return {"suggested_questions": questions}
+
+    def _summarize_lecture(self, collection_name: str) -> str:
+        docs_text = get_relevant_docs_text(collection_name, query="summarize this content")
+        #docs_text = test_lecture_text
+
+        prompt = (
+            "You are given content from a lecture document. "
+            "Please write a concise summary highlighting the key ideas:\n\n"
+            f"{docs_text}"
+        )
+
+        response = llm.invoke([HumanMessage(content=prompt)])
+        return response.content.strip()
+
+    def _generate_questions_from_summary(self, summary: str) -> List[str]:
+
+        prompt_template = self.prompt_service.get_prompt("suggestion_lecture_prompt.txt")
+        full_prompt = prompt_template + f"\n\n{summary}"
+
+        response = llm.invoke([HumanMessage(content=full_prompt)])
+        return [line.strip("- ").strip() for line in response.content.strip().split("\n") if line.strip()]
 
     def _format_history(self, messages: List[AnyMessage]) -> str:
         history = ""
@@ -89,4 +136,3 @@ class SuggestionService:
             elif isinstance(msg, AIMessage):
                 history += f"[Tutor]: {msg.content}\n"
         return history
-
