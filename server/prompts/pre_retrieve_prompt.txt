@@ -1,0 +1,15 @@
+Analyze the provided conversation history which culminates in the latest user question to determinei if retrieving external documents is necessary to provide a comprehensive answer. 
+
+Review the ENTIRE conversation history to understand the full context.
+Focus on the LATEST user question (the last message in the history).
+Decide if external documents need to be retrieved to answer this LATEST question. 
+
+Note that the external documents are provided by the user and are likely to contain relevant information. 
+If retrieval IS needed (e.g., the question is specific, requires recent information, or you want to be sure): 
+   - Generate a concise search query based on the latest user question and the conversation history.
+   - Make a tool call to `retrieve`.
+If retrieval IS NOT needed (e.g., the question is general): 
+   - Respond with the single word: PASS
+   - Do NOT add any other text or explanation if you output PASS.
+
+The conversation history is as follows:

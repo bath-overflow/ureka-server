@@ -5,12 +5,12 @@ from langchain_core.messages import (
     AIMessage,
     AnyMessage,
     HumanMessage,
-    RemoveMessage,
     ToolMessage,
 )
 from langchain_core.tools import tool
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import InjectedState, ToolNode
 
 from server.repositories.vector_store import vector_store
@@ -31,7 +31,7 @@ class LangGraphService:
         self.graph = self._build_graph()
         self.prompt_service = PromptService()
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self) -> CompiledStateGraph:
         """Build and compile the LangGraph."""
         graph_builder = StateGraph(State)
 
@@ -41,7 +41,6 @@ class LangGraphService:
         graph_builder.add_node("tools", self._create_tool_node())
         graph_builder.add_node("generate_initial_answer", self._generate_initial_answer)
         graph_builder.add_node("generate_final_answer", self._generate_final_answer)
-        graph_builder.add_node("cleanup_messages", self._cleanup_messages)
 
         # Set entry point
         graph_builder.set_entry_point("load_chat_history")
@@ -55,8 +54,7 @@ class LangGraphService:
         )
         graph_builder.add_edge("tools", "generate_initial_answer")
         graph_builder.add_edge("generate_initial_answer", "generate_final_answer")
-        graph_builder.add_edge("generate_final_answer", "cleanup_messages")
-        graph_builder.add_edge("cleanup_messages", END)
+        graph_builder.add_edge("generate_final_answer", END)
 
         return graph_builder.compile()
 
@@ -64,12 +62,18 @@ class LangGraphService:
     def _create_tool_node() -> ToolNode:
         """Create a tool node for document retrieval."""
 
-        @tool
+        @tool(response_format="content_and_artifact")
         def retrieve(
             query: str,
             collection_name: Annotated[str, InjectedState("collection_name")],
         ):
-            """Retrieves relevant documents uploaded by the user based on the query."""
+            """
+            Retrieves relevant documents uploaded by the user based on the query.
+
+            Args:
+                query: The query to search for relevant documents.
+                collection_name: The name of the collection to search in.
+            """
             print(
                 f"--- Retrieving documents for query: '{query}' in collection: "
                 f"'{collection_name}' ---"
@@ -81,10 +85,16 @@ class LangGraphService:
                 f"--- Retrieved {len(retrieved_docs)} documents from collection "
                 f"'{collection_name}' ---"
             )
-            return [
-                {"page_content": doc.page_content, "metadata": doc.metadata}
-                for doc in retrieved_docs
-            ]
+
+            content = ""
+            if retrieved_docs:
+                content = "\n\n".join(
+                    f"<source>{doc.metadata.get('source', 'N/A')}</source>"
+                    + f"<content>{doc.page_content}</content>"
+                    for doc in retrieved_docs
+                )
+
+            return content, retrieved_docs
 
         return ToolNode([retrieve])
 
@@ -121,13 +131,14 @@ class LangGraphService:
 
     def _pre_retrieve(self, state: State) -> Dict[str, List[AnyMessage]]:
         """
-        Given the query, decide whether to retrieve documents or use LLM knowledge.
+        Given the full conversation history, decide whether to retrieve documents
+        to answer the latest user query. If so, generate a history-informed
+        search query.
         """
-        print("--- Pre-retrieve: Analyzing query ---")
-        user_query = state.get("user_query")
-        if not user_query:
-            print("Error: No user query found in state for pre_retrieve")
-            raise ValueError("User query not found in state")
+        all_messages = state.get("messages", [])
+        if not all_messages:
+            print("Error: No messages found in state for pre_retrieve")
+            raise ValueError("Messages not found in state for pre_retrieve")
 
         collection_name = state.get("collection_name")
         if not collection_name:
@@ -138,107 +149,10 @@ class LangGraphService:
             [self._create_tool_node().tools_by_name["retrieve"]]
         )
 
-        prompt = (
-            "You are an assistant that decides whether external knowledge is needed to",
-            "answer a question.\n",
-            "Given the following question, decide if you need to search for additional",
-            "context from documents.\n",
-            "If document retrieval is needed, call the retrieve tool with a",
-            "well-formed search query.\n\n",
-            f"Question: {user_query}\n\n",
-            "Think carefully - if this is a question about specific information that",
-            "might be in the uploaded documents,",
-            "use the retrieve tool. If it's general knowledge or doesn't require",
-            "specific document content, answer simply 'PASS'.\n",
-        )
-
-        response = llm_with_tools.invoke([HumanMessage(content=prompt)])
-        return {"messages": [response]}
-
-    def _generate_initial_answer(self, state: State) -> Dict[str, str]:
-        """Generate the initial concise answer to the user's query."""
-        user_query = state.get("user_query")
-        if not user_query:
-            print("Error: user_query not found in state for generate_initial_answer")
-            raise ValueError("User query not found in state")
-
-        # Check if there are tool messages (retrieval results)
-        recent_tool_messages = []
-        for message in reversed(state.get("messages", [])):
-            if isinstance(message, ToolMessage):
-                recent_tool_messages.append(message)
-            else:
-                break
-        tool_messages = recent_tool_messages[::-1]
-
-        # Format retrieved documents if any
-        docs_content = ""
-        if tool_messages:
-            docs_content = "\n\n".join(
-                f"Source: {res['metadata'].get('source', 'N/A')}, "
-                f"Split Index: {res['metadata'].get('split_idx', 'N/A')}\n"
-                f"Content: {res['page_content']}\n"
-                for msg in tool_messages
-                for res in (msg.content if isinstance(msg.content, list) else [])
-                if isinstance(res, dict)
-            )
-            docs_content = f"<reference>{docs_content}</reference>\n"
-
-        # Generate initial answer
-        prompt_template = self.prompt_service.get_prompt("genai_query_prompt.txt")
-        msg_content = prompt_template + f"\n\n{user_query}\n\n{docs_content}"
-        response = llm.invoke([HumanMessage(content=msg_content)])
-        answer = response.content
-
-        print("--- Initial Answer Generated ---")
-        return {"initial_answer": answer}
-
-    def _generate_final_answer(self, state: State) -> Dict[str, List[AIMessage]]:
-        """
-        Generate the final response using teacher prompt, initial answer, and retrieval
-        results.
-        """
-        print("--- Teacher: Generating Response with Context ---")
-        user_query = state.get("user_query")
-        initial_answer = state.get("initial_answer")
-
-        if not user_query or not initial_answer:
-            print(
-                "Error: missing user_query or initial_answer in generate_final_answer"
-            )
-            raise ValueError("Missing required state elements")
-
-        recent_tool_messages = []
-        for message in reversed(state.get("messages", [])):
-            if isinstance(message, ToolMessage):
-                recent_tool_messages.append(message)
-            else:
-                break
-        tool_messages = recent_tool_messages[::-1]
-
-        # Format retrieved documents
-        docs_content = ""
-        if tool_messages:
-            docs_content = "\n\n".join(
-                f"Source: {res['metadata'].get('source', 'N/A')}, "
-                f"Split Index: {res['metadata'].get('split_idx', 'N/A')}\n"
-                f"Content: {res['page_content']}\n"
-                for msg in tool_messages
-                for res in (msg.content if isinstance(msg.content, list) else [])
-                if isinstance(res, dict)
-            )
-            docs_content = f"<reference>{docs_content}</reference>\n"
-
-        template = self.prompt_service.get_prompt("teacher_prompt.txt")
-        template += f"<query>{user_query}</query>\n"
-        template += f"<answer>{initial_answer}</answer>\n"
-        template += docs_content
+        instruction = self.prompt_service.get_prompt("pre_retrieve_prompt.txt")
 
         history = ""
-        messages_for_history = [
-            m for m in state.get("messages", []) if not isinstance(m, ToolMessage)
-        ]
-        for message in messages_for_history:
+        for message in all_messages:
             if isinstance(message, HumanMessage):
                 history += f"[Student]: {message.content}\n"
             elif (
@@ -248,43 +162,126 @@ class LangGraphService:
             ):
                 history += f"[Teacher]: {message.content}\n"
 
-        message_content = template + history + "[Teacher]: "
-        response = llm.invoke([HumanMessage(message_content)])
+        full_prompt = f"{instruction}\n{history}\n"
 
-        student_part_start_idx = response.content.find("[Student]")
-        if student_part_start_idx != -1:
-            response.content = response.content[:student_part_start_idx].strip()
+        print(f"--- Pre-retrieve: Analyzing {len(all_messages)} messages. ---")
 
+        # Invoke the LLM with the instruction and the full conversation history
+        response = llm_with_tools.invoke([HumanMessage(content=full_prompt)])
+
+        # The response is an AIMessage, which might contain tool calls
+        # or the content "PASS".
         return {"messages": [response]}
 
-    def _cleanup_messages(self, state: State) -> Dict[str, List[RemoveMessage]]:
+    def _generate_initial_answer(self, state: State) -> Dict[str, str]:
         """
-        Clean up the message history by removing tool calls, tool messages, and 'PASS'
-        messages."""
-        print("--- Cleaning up message history ---")
+        Generate the initial concise answer to the user's query,
+        using conversation history.
+        """
+        user_query = state.get("user_query")
+        if not user_query:
+            print("Error: user_query not found in state for generate_initial_answer")
+            raise ValueError("User query not found in state")
 
-        messages = state.get("messages", [])
-        message_to_remove_ids = []
+        all_messages = state.get("messages", [])
+        if not all_messages:
+            print("Error: No messages found in state for generate_initial_answer")
+            raise ValueError("Messages not found in state")
 
-        for message in messages:
-            # Remove AI messages with tool calls
-            if isinstance(message, AIMessage) and message.tool_calls:
-                message_to_remove_ids.append(message.id)
-
-            # Remove Tool Messages
-            elif isinstance(message, ToolMessage):
-                message_to_remove_ids.append(message.id)
-
-            # Remove AI messages that just say "PASS"
+        history = ""
+        for message in all_messages:
+            if isinstance(message, HumanMessage):
+                history += f"[Student]: {message.content}\n"
             elif (
                 isinstance(message, AIMessage)
-                and message.content.strip().lower() == "pass"
+                and not message.tool_calls
+                and not message.content.strip().lower() == "pass"
             ):
-                message_to_remove_ids.append(message.id)
+                history += f"[Teacher]: {message.content}\n"
 
-        # Create RemoveMessage objects for each index to remove
-        remove_messages = [RemoveMessage(id=id) for id in message_to_remove_ids]
-        return {"messages": remove_messages}
+        # Check if there are tool messages (retrieval results)
+        recent_tool_messages = []
+        for message in reversed(all_messages):  # Check all_messages for ToolMessages
+            if isinstance(message, ToolMessage):
+                recent_tool_messages.append(message)
+            else:
+                break
+        tool_messages = recent_tool_messages[::-1]
+
+        # Format retrieved documents if any
+        docs_content = ""
+        if tool_messages:
+            docs_content = "\n".join(tool_msg.content for tool_msg in tool_messages)
+            docs_content = f"<reference>{docs_content}</reference>\n"
+
+        # Generate initial answer
+        instruction = self.prompt_service.get_prompt("genai_query_prompt.txt")
+
+        full_prompt = f"{instruction}\n{docs_content}\n{history}\n"
+        response = llm.invoke([HumanMessage(content=full_prompt)])
+        answer = response.content
+
+        print(f"--- Initial Answer Generated (for query: '{user_query}') ---")
+        return {"initial_answer": answer}
+
+    def _generate_final_answer(self, state: State) -> Dict[str, List[AIMessage]]:
+        """
+        Generate the final response using teacher prompt, initial answer, and retrieval
+        results.
+        """
+        print("--- Teacher: Generating Response with Context ---")
+        user_query = state.get("user_query")
+        if not user_query:
+            print("Error: user_query not found in state for generate_final_answer")
+            raise ValueError("User query not found in state")
+        initial_answer = state.get("initial_answer")
+        if not initial_answer:
+            print("Error: initial_answer not found in state for generate_final_answer")
+            raise ValueError("Initial answer not found in state")
+        all_messages = state.get("messages", [])
+        if not all_messages:
+            print("Error: No messages found in state for generate_final_answer")
+            raise ValueError("Messages not found in state")
+
+        recent_tool_messages = []
+        for message in reversed(all_messages):
+            if isinstance(message, ToolMessage):
+                recent_tool_messages.append(message)
+            else:
+                break
+        tool_messages = recent_tool_messages[::-1]
+
+        # Format retrieved documents if any
+        docs_content = ""
+        if tool_messages:
+            docs_content = "\n".join(tool_msg.content for tool_msg in tool_messages)
+            docs_content = f"<reference>{docs_content}</reference>\n"
+
+        history = ""
+        for message in all_messages:
+            if isinstance(message, HumanMessage):
+                history += f"[Student]: {message.content}\n"
+            elif (
+                isinstance(message, AIMessage)
+                and not message.tool_calls
+                and not message.content.strip().lower() == "pass"
+            ):
+                history += f"[Teacher]: {message.content}\n"
+
+        instruction = self.prompt_service.get_prompt("teacher_prompt.txt")
+
+        full_prompt = "\n".join(
+            [
+                instruction,
+                f"<answer>{initial_answer}</answer>",
+                docs_content,
+                history + "[Teacher]: ",
+            ]
+        )
+
+        response = llm.invoke([HumanMessage(full_prompt)])
+
+        return {"messages": [response]}
 
     @staticmethod
     def _route_after_query(state: State) -> Literal["tools", "generate_initial_answer"]:
@@ -318,7 +315,8 @@ class LangGraphService:
 
         Args:
             chat_id: Identifier for the chat/collection
-            user_message: The message from the user
+            user_message: The message from the user. This is already written in the
+            chat history.
 
         Yields:
             Tokens from the AI response as they're generated
@@ -328,7 +326,6 @@ class LangGraphService:
             stream_input = {
                 "user_query": user_message,
                 "collection_name": chat_id,
-                "messages": [HumanMessage(content=user_message)],
             }
 
             # Stream the response from the graph with token-by-token streaming
