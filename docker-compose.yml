@@ -96,6 +96,7 @@ services:
   mineru-web-api:
     image: myungjune/mineru-web-api-capstone
     container_name: mineru-web-api
+    gpus: all
     restart: unless-stopped
     environment:
       - MINIO_ENDPOINT=minio:9000
