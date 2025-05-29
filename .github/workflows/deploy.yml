@@ -67,5 +67,5 @@ jobs:
             EOF
 
             docker pull ${{ vars.DOCKER_USERNAME }}/ureka-server:latest
-            docker-compose down
-            docker-compose up -d
+            docker compose down
+            docker compose up -d
