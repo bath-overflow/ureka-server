@@ -96,8 +96,12 @@ services:
   mineru-web-api:
     image: myungjune/mineru-web-api-capstone
     container_name: mineru-web-api
-    gpus: all
     restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
     environment:
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=minioadmin
