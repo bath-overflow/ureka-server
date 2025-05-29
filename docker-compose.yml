@@ -15,6 +15,8 @@ services:
   api:
     image: cocopam/ureka-server:latest
     environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=user
