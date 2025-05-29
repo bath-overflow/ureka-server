@@ -36,6 +36,7 @@ profile = "black"
 
 [dependency-groups]
 dev = [
+    "langsmith>=0.3.32",
     "pre-commit>=4.2.0",
     "pytest>=8.3.5",
     "pytest-env>=1.1.5",
