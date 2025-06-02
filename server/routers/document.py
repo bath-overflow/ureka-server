@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, File, Path, UploadFile
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from server.models.document_model import DocumentResponse
+from server.models.document_model import DocumentResponse, MarkdownContentResponse
 from server.services.document import (
     delete_document,
     get_document_metadata,
+    get_markdown_document_metadata,
     list_documents,
     upload_and_register_document,
 )
@@ -75,4 +75,22 @@ def delete_document_route(
     Delete a specific resource from a project
     """
     delete_document(db, projectId, filename)
-    return JSONResponse(status_code=204, content=None)
+    return None
+
+
+@router.get("/{filename}/md", response_model=MarkdownContentResponse)
+def get_markdown(
+    projectId: str = Path(..., description="Project ID"),
+    filename: str = Path(..., description="Original file name(e.g. PDF)"),
+    db: Session = Depends(get_db),
+):
+    """
+    Get markdown content of a specific resource
+    """
+    doc = get_markdown_document_metadata(db, projectId, filename)
+    return {
+        "filename": doc["filename"],
+        "uploadDate": doc["upload_date"].isoformat(),
+        "file_content": doc["file_content"],
+        "size": doc["size"],
+    }

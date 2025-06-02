@@ -43,3 +43,16 @@ class DocumentResponse(BaseModel):
     upload_date: str = Field(
         ..., alias="uploadDate", description="Document upload date"
     )
+
+
+class MarkdownContentResponse(BaseModel):
+    """
+    Response model for markdown content.
+    """
+
+    filename: str = Field(..., description="Filename of the document")
+    size: int = Field(..., description="Size of the document file in bytes")
+    file_content: str = Field(..., description="Markdown content of the document")
+    upload_date: str = Field(
+        ..., alias="uploadDate", description="Upload date of the document"
+    )
