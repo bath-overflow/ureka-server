@@ -7,8 +7,9 @@ from datetime import datetime
 from server.routers.chat import chat_service
 from server.services.llm import llm
 from server.services.prompt import PromptService
-from server.services.document import get_relevant_docs_text
 from server.models.chat_model import ChatMessage, ChatHistory
+from server.repositories.document_store import get_documents_by_project
+from server.utils.db import minio_client
 
 # 테스트용 chat history
 test_chat_history = ChatHistory(
@@ -52,7 +53,8 @@ class SuggestionState(TypedDict):
     suggested_questions: Optional[List[str]]
 
 class SuggestionService:
-    def __init__(self):
+    def __init__(self, db):
+        self.db = db
         self.graph = self._build_graph()
         self.prompt_service = PromptService()
 
@@ -108,16 +110,27 @@ class SuggestionService:
         return {"suggested_questions": questions}
 
     def _summarize_lecture(self, collection_name: str) -> str:
-        docs_text = get_relevant_docs_text(collection_name, query="summarize this content")
-        #docs_text = test_lecture_text
+        documents = get_documents_by_project(self.db, collection_name)
+        if not documents:
+            return "No lecture document found for this session."
 
-        prompt = (
-            "You are given content from a lecture document. "
-            "Please write a concise summary highlighting the key ideas:\n\n"
-            f"{docs_text}"
-        )
+        # get latest document name from db
+        latest_doc = documents[0]
+        bucket_name = "documents"
+        object_name = latest_doc.filename
 
-        response = llm.invoke([HumanMessage(content=prompt)])
+        try:
+            # read file from minIO
+            response = minio_client.get_object(bucket_name, object_name)
+            file_content = response.read().decode("utf-8")
+        except Exception as e:
+            print(f"Error reading from MinIO: {e}")
+            return "Failed to retrieve lecture material."
+
+        prompt_template = self.prompt_service.get_prompt("lecture_summary_prompt.txt")
+        full_prompt = prompt_template + f"\n\n{file_content[:2000]}"
+
+        response = llm.invoke([HumanMessage(content=full_prompt)])
         return response.content.strip()
 
     def _generate_questions_from_summary(self, summary: str) -> List[str]:
