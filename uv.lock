@@ -2582,6 +2582,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "langsmith" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-env" },
@@ -2612,6 +2613,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "langsmith", specifier = ">=0.3.32" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-env", specifier = ">=1.1.5" },

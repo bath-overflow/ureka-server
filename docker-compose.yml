@@ -15,6 +15,8 @@ services:
   api:
     image: cocopam/ureka-server:latest
     environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=user
@@ -88,6 +90,24 @@ services:
     volumes:
       - chroma_data:/data
     restart: unless-stopped
+    networks:
+      - internal
+
+  mineru-web-api:
+    image: myungjune/mineru-web-api-capstone
+    container_name: mineru-web-api
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
     networks:
       - internal
 
