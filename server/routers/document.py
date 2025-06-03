@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, File, Path, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 from sqlalchemy.orm import Session
 
 from server.models.document_model import DocumentResponse
 from server.services.document import (
     delete_document,
     get_document_metadata,
+    get_markdown_content,
     list_documents,
     upload_and_register_document,
 )
@@ -57,11 +57,22 @@ def get_document(
     Get details of a specific resource
     """
     doc = get_document_metadata(db, projectId, filename)
+
+    markdown_content_value: str | None = None
+    try:
+        markdown_content_value = get_markdown_content(db, projectId, filename)
+    except HTTPException as e:
+        # If 404 occurs, we set content to None and proceed.
+        # Other errors (e.g., 500 from MinIO access) will propagate.
+        if e.status_code != 404:
+            raise e
+
     return {
         "filename": doc.filename,
         "uploadDate": doc.upload_date.isoformat(),
         "file_url": doc.file_url,
         "size": doc.size,
+        "markdown_content": markdown_content_value,
     }
 
 
@@ -75,4 +86,4 @@ def delete_document_route(
     Delete a specific resource from a project
     """
     delete_document(db, projectId, filename)
-    return JSONResponse(status_code=204, content=None)
+    return None
