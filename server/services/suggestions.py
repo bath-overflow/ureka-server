@@ -11,41 +11,6 @@ from server.models.chat_model import ChatMessage, ChatHistory
 from server.repositories.document_store import get_documents_by_project
 from server.utils.db import minio_client
 
-# 테스트용 chat history
-test_chat_history = ChatHistory(
-    id="123",
-    messages=[
-        ChatMessage(
-            role="user",
-            message="What is TCP?",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="assistant",
-            message="Can you describe what TCP does in the network stack?",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="user",
-            message="TCP does 3-way handshake and controls congestion.",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="assistant",
-            message="Can you explain how congestion control works in TCP?",
-            created_at=datetime.utcnow().isoformat(),
-        )
-    ]
-)
-
-# 테스트용 lecture text
-test_lecture_text = """
-TCP (Transmission Control Protocol) is a core protocol of the Internet protocol suite. 
-It originated in the initial network implementation in which it complemented the Internet Protocol (IP). 
-Therefore, the entire suite is commonly referred to as TCP/IP. 
-TCP provides reliable, ordered, and error-checked delivery of a stream of data between applications running on hosts communicating via an IP network.
-"""
-
 
 class SuggestionState(TypedDict):
     collection_name: str
@@ -69,7 +34,7 @@ class SuggestionService:
 
     def _load_chat_history(self, state: SuggestionState) -> Dict:
         collection_name = state.get("collection_name")
-        #chat_history = test_chat_history  
+ 
         chat_history = chat_service.get_history(collection_name)
 
         if chat_history is None or not chat_history.messages:
@@ -110,25 +75,32 @@ class SuggestionService:
         return {"suggested_questions": questions}
 
     def _summarize_lecture(self, collection_name: str) -> str:
+        # get documents metadata list from db 
         documents = get_documents_by_project(self.db, collection_name)
         if not documents:
-            return "No lecture document found for this session."
+           return "No lecture document found for this session."
 
-        # get latest document name from db
-        latest_doc = documents[0]
-        bucket_name = "documents"
-        object_name = latest_doc.filename
+        bucket_name = "markdowns"
+        file_content = ""
+        
+        for doc in documents:
+            try:
+                # get md files from markdowns
+                response = minio_client.get_object(bucket_name, doc.filename)
+                content = response.read().decode("utf-8")
+                if content.strip():
+                    file_content += f"\n\n# Document: {doc.filename}\n{content.strip()}"
+            except Exception as e:
+                print(f"Failed to read {doc.filename} from MinIO: {e}")
+                continue
 
-        try:
-            # read file from minIO
-            response = minio_client.get_object(bucket_name, object_name)
-            file_content = response.read().decode("utf-8")
-        except Exception as e:
-            print(f"Error reading from MinIO: {e}")
-            return "Failed to retrieve lecture material."
-
+        if not file_content.strip():
+            raise ValueError("All lecture documents are empty or failed to load.")
+        
+        #print(f"FILE CONTENT:\n{file_content}")
+        
         prompt_template = self.prompt_service.get_prompt("lecture_summary_prompt.txt")
-        full_prompt = prompt_template + f"\n\n{file_content[:2000]}"
+        full_prompt = prompt_template + f"\n\n{file_content}"
 
         response = llm.invoke([HumanMessage(content=full_prompt)])
         return response.content.strip()
