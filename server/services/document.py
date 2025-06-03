@@ -152,9 +152,9 @@ def get_document_metadata(
     return document
 
 
-def get_markdown_document_metadata(db: Session, project_id: str, filename: str) -> dict:
+def get_markdown_content(db: Session, project_id: str, filename: str) -> str:
     """
-    Returns metadata and content for the markdown version of the document.
+    Returns content for the markdown version of the document.
     Note that the image URLs in the markdown content are replaced with presigned URLs.
 
     Args:
@@ -164,8 +164,7 @@ def get_markdown_document_metadata(db: Session, project_id: str, filename: str) 
             (non-markdown version - e.g. "report.pdf")
 
     Returns:
-        dict: Metadata including filename, upload date, size, and markdown content with
-            image URLs replaced. Upload date is the original document's upload date.
+        out (str): Markdown content with presigned image URLs.
     """
     # Look up in DB
     document = get_document_by_filename(db, project_id, filename)
@@ -181,8 +180,7 @@ def get_markdown_document_metadata(db: Session, project_id: str, filename: str) 
 
     try:
         # Check existence and get metadata including size
-        object_stat = minio_client.stat_object("markdowns", minio_object_name)
-        markdown_size = object_stat.size
+        minio_client.stat_object("markdowns", minio_object_name)
     except S3Error as e:
         if e.code == "NoSuchKey":
             # If the markdown file does not exist, raise a 404 error
@@ -245,12 +243,7 @@ def get_markdown_document_metadata(db: Session, project_id: str, filename: str) 
         r"!\[(.*?)\]\(([^)]+)\)", image_url_replacer, markdown_content_str
     )
 
-    return {
-        "filename": markdown_doc_filename,
-        "upload_date": document.upload_date,  # Original document's upload date
-        "size": markdown_size,
-        "file_content": processed_markdown_content,
-    }
+    return processed_markdown_content
 
 
 def delete_document(db: Session, project_id: str, filename: str):
