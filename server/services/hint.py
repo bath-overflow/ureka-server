@@ -19,9 +19,39 @@ from server.services.prompt import PromptService
 from datetime import datetime
 from server.models.chat_model import ChatMessage, ChatHistory
 
+# 테스트용 ChatHistory 생성
+test_chat_history = ChatHistory(
+    id="12",
+    messages=[
+        ChatMessage(
+            role="user",
+            message="What is prompt engineering?",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="assistant",
+            message="Can you describe what prompt engineering aims to achieve when working with language models?",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="user",
+            message="It aims to design inputs that guide the model to produce better outputs.",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="assistant",
+            message="Can you explain some techniques commonly used in prompt engineering to improve model responses?",
+            created_at=datetime.utcnow().isoformat(),
+        )
+    ],
+)
+
+
 # --- State Definition ---
 class State(TypedDict):
     prev_question: Optional[str]
+    hint: Optional[str]
+    references: Optional[List[str]]
     initial_answer: Optional[str]
     messages: Annotated[list[AnyMessage], add_messages]
     collection_name: Optional[str]
@@ -125,7 +155,7 @@ class HintService:
             [self._create_tool_node().tools_by_name["retrieve"]]
         )
 
-        instruction = self.prompt_service.get_prompt("pre_retrieve_prompt.txt")
+        instruction = self.prompt_service.get_prompt("hint_pre_retrieve_prompt.txt")
 
         history = ""
         for message in all_messages:
@@ -150,7 +180,7 @@ class HintService:
         return {"messages": [response]}
 
     def _generate_initial_answer(self, state: State) -> Dict[str, str]:
-        """Generate the initial concise answer to the user's query."""
+        """Generate the initial concise answer to previous question."""
         prev_question = state.get("prev_question")
         if not prev_question:
             print("Error: prev_question not found in state for generate_initial_answer")
@@ -160,17 +190,6 @@ class HintService:
         if not all_messages:
             print("Error: No messages found in state for generate_initial_answer")
             raise ValueError("Messages not found in state")
-
-        history = ""
-        for message in all_messages:
-            if isinstance(message, HumanMessage):
-                history += f"[Student]: {message.content}\n"
-            elif (
-                isinstance(message, AIMessage)
-                and not message.tool_calls
-                and not message.content.strip().lower() == "pass"
-            ):
-                history += f"[Teacher]: {message.content}\n"
 
         # Check if there are tool messages (retrieval results)
         recent_tool_messages = []
@@ -188,15 +207,18 @@ class HintService:
             docs_content = f"<reference>{docs_content}</reference>\n"
 
         # Generate initial answer
-        prompt_template = self.prompt_service.get_prompt("genai_query_prompt.txt")
+        prompt_template = self.prompt_service.get_prompt("hint_query_prompt.txt")
         full_prompt = prompt_template + f"\n\n{prev_question}\n\n{docs_content}"
         response = llm.invoke([HumanMessage(content=full_prompt)])
         answer = response.content
 
         print("--- Initial Answer Generated ---")
-        return {"initial_answer": answer}
+        return {
+            "initial_answer": answer,
+            "references": docs_content,
+        }
 
-    def _generate_hint(self, state: State) -> Dict[str, List[AIMessage]]:
+    def _generate_hint(self, state: State) -> Dict[str, list[str]]:
         """
         Generate the final response using hint prompt, initial answer, and retrieval
         results.
@@ -206,29 +228,20 @@ class HintService:
         if not prev_question:
             print("Error: prev_question not found in state for generate_hint")
             raise ValueError("Previous question not found in state")
+        
         initial_answer = state.get("initial_answer")
         if not initial_answer:
             print("Error: initial_answer not found in state for generate_hint")
             raise ValueError("Initial answer not found in state")
+        
         all_messages = state.get("messages", [])
         if not all_messages:
             print("Error: No messages found in state for generate_hint")
             raise ValueError("Messages not found in state")
 
-        recent_tool_messages = []
-        for message in reversed(all_messages):
-            if isinstance(message, ToolMessage):
-                recent_tool_messages.append(message)
-            else:
-                break
-        tool_messages = recent_tool_messages[::-1]
-
-        # Format retrieved documents
-        docs_content = ""
-        if tool_messages:
-            docs_content = "\n".join(tool_msg.content for tool_msg in tool_messages)
-            docs_content = f"<reference>{docs_content}</reference>\n"
-
+        docs_content = state.get("references", "")
+        print(f"PREV QUESTION:\n{prev_question}")
+        print(f"INITIAL ANSWER:\n{initial_answer}")
         history = ""
         for message in all_messages:
             if isinstance(message, HumanMessage):
@@ -252,8 +265,17 @@ class HintService:
         )
         
         response = llm.invoke([HumanMessage(full_prompt)])
+        
+        # reference에서 source만 추출
+        import re
+        source_pattern = r"<source>(.*?)</source>"
+        sources = re.findall(source_pattern, docs_content)
+        sources = list(set(sources)) if sources else ["None"]
 
-        return {"messages": [response]}
+        return {
+            "messages": [response],
+            "references": sources,
+        }
 
     @staticmethod
     def _route_after_query(state: State) -> Literal["tools", "generate_initial_answer"]:
@@ -285,8 +307,8 @@ class HintService:
         """
         from server.routers.chat import chat_service
         
-        chat_history = chat_service.get_history(chat_id)
-        #chat_history = test_chat_history
+        #chat_history = chat_service.get_history(chat_id)
+        chat_history = test_chat_history
         
         if chat_history is None:
             raise ValueError(f"No chat history found for collection '{chat_id}'")
@@ -314,13 +336,14 @@ class HintService:
 
     async def generate_hint_response(
         self, chat_id: str
-    ) -> str:
+    ) -> tuple[str, list[str]]:
         """
         Generate hint responses from the AI.
         Args:
             chat_id: Identifier for the chat/collection
         Yields:
             The full generated hint response as a string.
+            Refered lecture notes.
         """
         try:
             # Get previous question from llm
@@ -338,11 +361,16 @@ class HintService:
 
             # Extract final message (typically from generate_hint)
             messages = final_state.get("messages", [])
+            hint = "[No hint response generated.]"
             for message in reversed(messages):
                 if isinstance(message, AIMessage):
-                    return message.content.strip()
+                    hint = message.content.strip()
 
-            return "[No hint response generated.]"
+            references = final_state.get("references", [])
+            if not references:
+                references = ["None"]
+
+            return hint, references
 
         except Exception as e:
             error_msg = f"Error in generate_chat_response: {str(e)}"
