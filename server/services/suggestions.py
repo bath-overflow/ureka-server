@@ -7,6 +7,7 @@ from datetime import datetime
 from server.routers.chat import chat_service
 from server.services.llm import llm
 from server.services.prompt import PromptService
+from server.services.document import get_markdown_content
 from server.models.chat_model import ChatMessage, ChatHistory
 from server.repositories.document_store import get_documents_by_project
 from server.utils.db import minio_client
@@ -85,9 +86,8 @@ class SuggestionService:
         
         for doc in documents:
             try:
-                # get md files from markdowns
-                response = minio_client.get_object(bucket_name, doc.filename)
-                content = response.read().decode("utf-8")
+                # read markdown contents
+                content = get_markdown_content(db, collection_name, doc.filename)
                 if content.strip():
                     file_content += f"\n\n# Document: {doc.filename}\n{content.strip()}"
             except Exception as e:
@@ -97,7 +97,6 @@ class SuggestionService:
         if not file_content.strip():
             raise ValueError("All lecture documents are empty or failed to load.")
         
-        #print(f"FILE CONTENT:\n{file_content}")
         
         prompt_template = self.prompt_service.get_prompt("lecture_summary_prompt.txt")
         full_prompt = prompt_template + f"\n\n{file_content}"

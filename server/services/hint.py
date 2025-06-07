@@ -19,33 +19,6 @@ from server.services.prompt import PromptService
 from datetime import datetime
 from server.models.chat_model import ChatMessage, ChatHistory
 
-# 테스트용 ChatHistory 생성
-test_chat_history = ChatHistory(
-    id="12",
-    messages=[
-        ChatMessage(
-            role="user",
-            message="What is prompt engineering?",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="assistant",
-            message="Can you describe what prompt engineering aims to achieve when working with language models?",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="user",
-            message="It aims to design inputs that guide the model to produce better outputs.",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="assistant",
-            message="Can you explain some techniques commonly used in prompt engineering to improve model responses?",
-            created_at=datetime.utcnow().isoformat(),
-        )
-    ],
-)
-
 
 # --- State Definition ---
 class State(TypedDict):
@@ -93,7 +66,7 @@ class HintService:
     def _create_tool_node() -> ToolNode:
         """Create a tool node for document retrieval."""
 
-        @tool
+        @tool(response_format="content_and_artifact")
         def retrieve(
             query: str,
             collection_name: Annotated[str, InjectedState("collection_name")],
@@ -118,7 +91,7 @@ class HintService:
                     + f"<content>{doc.page_content}</content>"
                     for doc in retrieved_docs
                 )
-
+            print(f"CONTENT:\n{content}")
             return content, retrieved_docs
 
         return ToolNode([retrieve])
@@ -131,11 +104,14 @@ class HintService:
             print("Error: No collection name found in state for load_chat_history")
             raise ValueError("Collection name not found in state")
 
-        # Get chat history from ChatService
-        messages, _ = self._get_messages_and_last_ai_question(collection_name)
+        # Get previous question from llm
+        messages, prev_question = self._get_messages_and_last_ai_question(collection_name)
 
         print(f"--- Loaded {len(messages)} messages from chat history ---")
-        return {"messages": messages}
+        return {
+            "prev_question": prev_question,
+            "messages": messages,
+        }
 
     def _pre_retrieve(self, state: State) -> Dict[str, List[AnyMessage]]:
         """
@@ -211,7 +187,7 @@ class HintService:
         full_prompt = prompt_template + f"\n\n{prev_question}\n\n{docs_content}"
         response = llm.invoke([HumanMessage(content=full_prompt)])
         answer = response.content
-
+        
         print("--- Initial Answer Generated ---")
         return {
             "initial_answer": answer,
@@ -239,9 +215,10 @@ class HintService:
             print("Error: No messages found in state for generate_hint")
             raise ValueError("Messages not found in state")
 
-        docs_content = state.get("references", "")
-        print(f"PREV QUESTION:\n{prev_question}")
-        print(f"INITIAL ANSWER:\n{initial_answer}")
+        docs_content = state.get("references", [])
+
+        print(f"DOCS CONTENT:\n{docs_content}")
+        
         history = ""
         for message in all_messages:
             if isinstance(message, HumanMessage):
@@ -260,21 +237,35 @@ class HintService:
                 instruction,
                 f"<answer>{initial_answer}</answer>",
                 docs_content,
-                history + "[Teacher]: ",
+                history + "[Student]: I have no idea.\n"+"[Teacher]: ",
             ]
         )
+        print(f"FULL PROMPT:\n{full_prompt}")
         
         response = llm.invoke([HumanMessage(full_prompt)])
         
-        # reference에서 source만 추출
+        # reference 다듬기
         import re
-        source_pattern = r"<source>(.*?)</source>"
-        sources = re.findall(source_pattern, docs_content)
-        sources = list(set(sources)) if sources else ["None"]
+        reference_pattern = re.compile(
+            r"<reference>\s*<source>(.*?)</source>\s*<content>(.*?)</content>\s*</reference>",
+            re.DOTALL
+        )
+        references = []
+        for match in reference_pattern.finditer(docs_content):
+            source = match.group(1).strip()
+            content = match.group(2).strip()
+            references.append({
+                "source": source,
+                "content": content
+            })
+    
+        # reference 없을 시 fallback
+        if not references:
+            references = [{"source": "None", "content": "None"}]
 
         return {
-            "messages": [response],
-            "references": sources,
+            "hint": response.content,
+            "references": references,
         }
 
     @staticmethod
@@ -307,8 +298,8 @@ class HintService:
         """
         from server.routers.chat import chat_service
         
-        #chat_history = chat_service.get_history(chat_id)
-        chat_history = test_chat_history
+        chat_history = chat_service.get_history(chat_id)
+        #chat_history = test_chat_history
         
         if chat_history is None:
             raise ValueError(f"No chat history found for collection '{chat_id}'")
@@ -346,26 +337,17 @@ class HintService:
             Refered lecture notes.
         """
         try:
-            # Get previous question from llm
-            messages, prev_question = self._get_messages_and_last_ai_question(chat_id)
             
             # Prepare input for the graph
             graph_input = {
-                "prev_question": prev_question,
                 "collection_name": chat_id,
-                "messages": messages,
             }
 
             # Run the graph fully (non-streaming)
             final_state = await self.graph.ainvoke(graph_input)
 
             # Extract final message (typically from generate_hint)
-            messages = final_state.get("messages", [])
-            hint = "[No hint response generated.]"
-            for message in reversed(messages):
-                if isinstance(message, AIMessage):
-                    hint = message.content.strip()
-
+            hint = final_state.get("hint")
             references = final_state.get("references", [])
             if not references:
                 references = ["None"]
@@ -376,4 +358,4 @@ class HintService:
             error_msg = f"Error in generate_chat_response: {str(e)}"
             print(f"Error processing message for chat {chat_id}: {e}")
             traceback.print_exc()
-            return f"[ERROR: {error_msg}]"
+            return f"[ERROR: {error_msg}]", ["None"]
