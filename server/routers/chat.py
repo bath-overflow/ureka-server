@@ -1,8 +1,15 @@
 import json
+import random
 import traceback
 import uuid
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from pydantic import ValidationError
 
 from server.models.chat_model import ChatHistoryResponse, ChatMessage
@@ -81,13 +88,17 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
                 chat_service.save_message(chat_id, user_message)
             except Exception as e:
                 await chat_service.send_message_to_user(
-                    chat_id, ChatEvent.ERROR.value, f"Failed to save message: {str(e)}"
+                    chat_id,
+                    ChatEvent.ERROR.value,
+                    f"Failed to save message: {str(e)}",
                 )
                 continue
 
             # Notify client that we received the message
             await chat_service.send_message_to_user(
-                chat_id, ChatEvent.MESSAGE_RECEIVED.value, "Processing your message..."
+                chat_id,
+                ChatEvent.MESSAGE_RECEIVED.value,
+                "Processing your message...",
             )
 
             # Process and stream AI response
@@ -135,6 +146,157 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
 
             # Ensure cleanup
             chat_service.disconnect_user(chat_id)
+
+
+@chat_router.websocket("/ws/debate/{chat_id}")
+async def debate_websocket(websocket: WebSocket, chat_id: str):
+    """
+    WebSocket connection handler for debate mode
+    that creates a new chat branch from an existing chat
+    """
+    if not chat_id or not chat_id.strip():
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION, reason="Invalid chat_id"
+        )
+        return
+
+    # Create a new chat ID for the debate
+    debate_chat_id = f"{chat_id}_debate_{uuid.uuid4().hex}"
+    connection_established = False
+
+    try:
+        # Copy existing chat history to new debate chat
+        existing_history = chat_service.get_history(chat_id)
+        if existing_history:
+            for message in existing_history.messages:
+                chat_service.save_message(debate_chat_id, message)
+
+        await chat_service.connect_user(debate_chat_id, websocket)
+        connection_established = True
+
+        await chat_service.send_message_to_user(
+            debate_chat_id,
+            ChatEvent.CONNECTED.value,
+            ChatInfo.CONNECTED.value,
+        )
+
+        while True:
+            data = await websocket.receive_text()
+            # Parse incoming message
+            try:
+                data_dict = json.loads(data)
+                user_message = ChatMessage.model_validate(data_dict)
+            except json.JSONDecodeError:
+                await chat_service.send_message_to_user(
+                    debate_chat_id,
+                    ChatEvent.ERROR.value,
+                    "Invalid message format: Expected JSON",
+                )
+                continue
+            except ValidationError:
+                await chat_service.send_message_to_user(
+                    debate_chat_id,
+                    ChatEvent.ERROR.value,
+                    "Invalid message structure",
+                )
+                continue
+
+            if user_message.message.strip() == "":
+                await chat_service.send_message_to_user(
+                    debate_chat_id,
+                    ChatEvent.ERROR.value,
+                    "Empty message not allowed",
+                )
+                continue
+            if user_message.role != "user":
+                await chat_service.send_message_to_user(
+                    debate_chat_id,
+                    ChatEvent.ERROR.value,
+                    "Invalid role: Only 'user' role is allowed",
+                )
+                continue
+
+            try:
+                chat_service.save_message(debate_chat_id, user_message)
+            except Exception as e:
+                await chat_service.send_message_to_user(
+                    debate_chat_id,
+                    ChatEvent.ERROR.value,
+                    f"Failed to save message: {str(e)}",
+                )
+                continue
+
+            # Notify client that we received the message
+            await chat_service.send_message_to_user(
+                debate_chat_id,
+                ChatEvent.MESSAGE_RECEIVED.value,
+                "Processing your message...",
+            )
+
+            # Process and stream AI response
+            try:
+                # TODO Implement Generate Debate response
+                roles = ["coworker", "professor"]
+                selected_role = random.choice(roles)
+
+                # Simulate a debate response
+                debate_response = f"[{selected_role.upper()}] I understand your point, but let me offer a different perspective..."
+
+                # Send the response
+                # TODO Stream message to client
+                await chat_service.send_message_to_user(
+                    debate_chat_id,
+                    ChatEvent.SEND_MESSAGE.value,
+                    debate_response,
+                )
+
+                # Save the response to chat history
+                assistant_message = ChatMessage(
+                    role=selected_role,
+                    message=debate_response,
+                )
+                chat_service.save_message(debate_chat_id, assistant_message)
+
+                # Signal end of stream
+                await chat_service.send_message_to_user(
+                    debate_chat_id,
+                    ChatEvent.SEND_MESSAGE.value,
+                    ChatInfo.END_OF_STREAM.value,
+                )
+
+            except Exception as e:
+                error_msg = f"Failed to generate response: {str(e)}"
+                await chat_service.send_message_to_user(
+                    debate_chat_id, ChatEvent.ERROR.value, error_msg
+                )
+                print(
+                    f"AI response generation error for debate chat {debate_chat_id}: {str(e)}"
+                )
+                traceback.print_exc()
+
+    except WebSocketDisconnect:
+        if connection_established:
+            chat_service.disconnect_user(debate_chat_id)
+            print(f"Client {debate_chat_id} disconnected from debate.")
+    except Exception as e:
+        # Unexpected error
+        print(
+            f"Unexpected error in debate WebSocket handler for chat {debate_chat_id}: {str(e)}"
+        )
+        traceback.print_exc()
+
+        # Try to send error to client if connection is still valid
+        if connection_established:
+            try:
+                error_message = f"Server error: {str(e)}"
+                await chat_service.send_message_to_user(
+                    debate_chat_id, ChatEvent.ERROR.value, error_message
+                )
+            except Exception as e:
+                print(f"Failed to send error message to client: {str(e)}")
+
+            # Ensure cleanup
+            chat_service.disconnect_user(debate_chat_id)
 
 
 @chat_router.get("/chat/{chat_id}/history", response_model=ChatHistoryResponse)
