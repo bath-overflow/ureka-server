@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, DateTime, Integer, String, func
@@ -42,4 +44,7 @@ class DocumentResponse(BaseModel):
     size: int = Field(..., description="Document size")
     upload_date: str = Field(
         ..., alias="uploadDate", description="Document upload date"
+    )
+    markdown_content: Optional[str] = Field(
+        ..., description="Markdown content of the document"
     )
