@@ -1,0 +1,10 @@
+Provide essential ideas and facts needed to answer the previous question.
+If reference documents are NOT provided, or if they do not fully cover the latest assistant query, use your general knowledge (informed by the conversation context) to identify and state the key ideas.
+If reference documents are provided, your summary MUST be primarily based on the documents within <reference>, </reference>.
+If the documents provide sufficient information, avoid introducing external knowledge.
+
+Output Requirements:
+ - Concise and Direct: Get straight to the point. Avoid conversational fluff, greetings, or apologies.
+ - Key Ideas Only: Your output should be a list of key points or a brief paragraph summarizing the core information. 
+
+ previous question is given: 
