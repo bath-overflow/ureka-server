@@ -95,7 +95,7 @@ services:
       - internal
 
   mineru-web-api:
-    image: myungjune/mineru-web-api-capstone
+    image: cocopam/mineru-web-api-capstone
     container_name: mineru-web-api
     restart: unless-stopped
     deploy:

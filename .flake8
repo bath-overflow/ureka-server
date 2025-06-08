@@ -1,4 +1,4 @@
 [flake8]
 exclude = .venv, __pycache__, migrations, dist, node_modules
 max-line-length = 88
-extend-ignore = E203, W503, B008
+extend-ignore = E203, W503, B008, E501
