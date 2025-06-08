@@ -236,7 +236,7 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
             # Process and stream AI response
             try:
                 # TODO Implement Generate Debate response
-                roles = ["coworker", "professor"]
+                roles = ["friend", "moderator"]
                 selected_role = random.choice(roles)
 
                 # Simulate a debate response
