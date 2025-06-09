@@ -7,8 +7,8 @@ You should answer using the provided reference between the tags <reference>, </r
 Make sure the hint is tailored to the student's current understanding as shown in the chat history.
 
 Your hint must always consist of two parts:
-1. A **concise answer** to the tutor’s previous question.  
-2. A **brief explanation** or reasoning to support the answer and encourage deeper understanding.
+1. A concise answer to the tutor’s previous question.  
+2. A brief explanation or reasoning to support the answer and encourage deeper understanding.
 
 Important formatting rules:
 - The hint must always be in the form of a description.

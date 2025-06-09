@@ -19,32 +19,6 @@ from server.services.prompt import PromptService
 from datetime import datetime
 from server.models.chat_model import ChatMessage, ChatHistory
 
-# 테스트용 ChatHistory 생성
-# test_chat_history = ChatHistory(
-#     id="0f0f26c4-9787-4452-b3fb-886be6e97fd0",
-#     messages=[
-#         ChatMessage(
-#             role="user",
-#             message="What is TCP?",
-#             created_at=datetime.utcnow().isoformat(),
-#         ),
-#         ChatMessage(
-#             role="assistant",
-#             message="Can you describe what TCP does in the network stack?",
-#             created_at=datetime.utcnow().isoformat(),
-#         ),
-#         ChatMessage(
-#             role="user",
-#             message="TCP does 3-way handshake and controls congestion.",
-#             created_at=datetime.utcnow().isoformat(),
-#         ),
-#         ChatMessage(
-#             role="assistant",
-#             message="Can you explain how congestion control works in TCP?",
-#             created_at=datetime.utcnow().isoformat(),
-#         )
-#     ],
-# )
 
 # --- State Definition ---
 class State(TypedDict):
