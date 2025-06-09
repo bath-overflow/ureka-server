@@ -12,6 +12,16 @@ from server.models.chat_model import ChatMessage, ChatHistory
 from server.repositories.document_store import get_documents_by_project
 from server.utils.db import minio_client
 
+# test_file_content = """
+# 프롬프팅(Prompting)은 인공지능 언어 모델에게 원하는 응답을 얻기 위해 입력 문장을 설계하는 기술입니다. 프롬프트의 구조, 문맥, 명확성은 모델의 응답 품질에 큰 영향을 미칩니다. 예를 들어, "AI란 무엇인가요?"라는 단순 질문보다 "AI의 정의와 역사적 발전 과정을 간단히 설명해 주세요."라는 구체적인 프롬프트가 더 나은 응답을 이끌어냅니다.
+
+# 프롬프팅 기법에는 Zero-shot, One-shot, Few-shot 프롬프팅이 있으며, 이들은 예시 제공 유무에 따라 나뉩니다. Zero-shot은 예시 없이 질문만 던지는 방식이고, Few-shot은 여러 개의 예시를 통해 모델의 기대 응답 형태를 유도합니다.
+
+# 또한, 역할 기반 프롬프팅(Role Prompting), 체인 오브 쏘트(Chain of Thought) 프롬프팅 등 다양한 고급 기법들이 존재합니다. 역할 기반 프롬프팅은 모델에게 특정 인물이나 역할을 부여하여 보다 일관된 응답을 유도하고, 체인 오브 쏘트는 문제 해결 과정을 단계별로 유도해 복잡한 문제를 푸는 데 효과적입니다.
+
+# 프롬프팅은 단순히 질문을 던지는 것이 아니라, 언어 모델과의 상호작용에서 원하는 결과를 끌어내는 설계 능력이라고 할 수 있습니다.
+# """
+
 
 class SuggestionState(TypedDict):
     collection_name: str
@@ -76,13 +86,14 @@ class SuggestionService:
         return {"suggested_questions": questions}
 
     def _summarize_lecture(self, collection_name: str) -> str:
-        # get documents metadata list from db 
+        get documents metadata list from db 
         documents = get_documents_by_project(self.db, collection_name)
         if not documents:
            return "No lecture document found for this session."
 
         bucket_name = "markdowns"
         file_content = ""
+        #file_content = test_file_content
         
         for doc in documents:
             try:

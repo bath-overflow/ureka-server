@@ -19,6 +19,32 @@ from server.services.prompt import PromptService
 from datetime import datetime
 from server.models.chat_model import ChatMessage, ChatHistory
 
+#테스트용 ChatHistory 생성
+# test_chat_history = ChatHistory(
+#     id="0f0f26c4-9787-4452-b3fb-886be6e97fd0",
+#     messages=[
+#         ChatMessage(
+#             role="user",
+#             message="프롬프트 엔지니어링이 뭔가요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="assistant",
+#             message="프롬프트 엔지니어링은 LLM이 원하는 출력을 내도록 질문이나 명령을 설계하는 방법이에요. 왜 이런 기술이 필요한지 생각해본 적 있나요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="user",
+#             message="LLM이 가끔 엉뚱한 답을 줄 때가 있어서 그런 것 같아요.",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="assistant",
+#             message="맞아요. 그럼 어떤 요소들이 잘 설계된 프롬프트를 만들게 해줄까요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         )
+#     ],
+# )
 
 # --- State Definition ---
 class State(TypedDict):
@@ -40,17 +66,15 @@ class HintService:
         graph_builder = StateGraph(State)
 
         # Add nodes
-        graph_builder.add_node("load_chat_history", self._load_chat_history)
         graph_builder.add_node("pre_retrieve", self._pre_retrieve)
         graph_builder.add_node("tools", self._create_tool_node())
         graph_builder.add_node("generate_initial_answer", self._generate_initial_answer)
         graph_builder.add_node("generate_hint", self._generate_hint)
 
         # Set entry point
-        graph_builder.set_entry_point("load_chat_history")
+        graph_builder.set_entry_point("pre_retrieve")
 
         # Add edges
-        graph_builder.add_edge("load_chat_history", "pre_retrieve")
         graph_builder.add_conditional_edges(
             "pre_retrieve",
             self._route_after_query,
@@ -96,22 +120,22 @@ class HintService:
 
         return ToolNode([retrieve])
 
-    def _load_chat_history(self, state: State) -> Dict[str, List[AnyMessage]]:
-        """Load chat history from ChatHistory at the start of the graph."""
-        print("--- Loading chat history ---")
-        collection_name = state.get("collection_name")
-        if not collection_name:
-            print("Error: No collection name found in state for load_chat_history")
-            raise ValueError("Collection name not found in state")
+    # def _load_chat_history(self, state: State) -> Dict[str, List[AnyMessage]]:
+    #     """Load chat history from ChatHistory at the start of the graph."""
+    #     print("--- Loading chat history ---")
+    #     collection_name = state.get("collection_name")
+    #     if not collection_name:
+    #         print("Error: No collection name found in state for load_chat_history")
+    #         raise ValueError("Collection name not found in state")
 
-        # Get previous question from llm
-        messages, prev_question = self._get_messages_and_last_ai_question(collection_name)
+    #     # Get previous question from llm
+    #     messages, prev_question = self._get_messages_and_last_ai_question(collection_name)
 
-        print(f"--- Loaded {len(messages)} messages from chat history ---")
-        return {
-            "prev_question": prev_question,
-            "messages": messages,
-        }
+    #     print(f"--- Loaded {len(messages)} messages from chat history ---")
+    #     return {
+    #         "prev_question": prev_question,
+    #         "messages": messages,
+    #     }
 
     def _pre_retrieve(self, state: State) -> Dict[str, List[AnyMessage]]:
         """
@@ -292,7 +316,7 @@ class HintService:
         )
         return "generate_initial_answer"
 
-    def _get_messages_and_last_ai_question(self, chat_id: str) -> tuple[list[AnyMessage], str]:
+    def _get_messages_and_last_ai_question(self, chat_id: str) -> tuple[Optional[list[AnyMessage]], Optional[str]]:
         """
         Fetch chat history and return LangChain message list and last AI question.
         """
@@ -302,7 +326,7 @@ class HintService:
         #chat_history = test_chat_history
         
         if chat_history is None:
-            raise ValueError(f"No chat history found for collection '{chat_id}'")
+            return None, None
 
         # Convert to messages
         messages = [
@@ -337,10 +361,19 @@ class HintService:
             Refered lecture notes.
         """
         try:
+            # Get previous question from llm
+            messages, prev_question = self._get_messages_and_last_ai_question(chat_id)
+            
+            if not messages:
+                hint = "아직 답변할 내용이 없습니다."
+                references = ["None"]
+                return hint, references
             
             # Prepare input for the graph
             graph_input = {
                 "collection_name": chat_id,
+                "prev_question": prev_question,
+                "messages": messages,
             }
 
             # Run the graph fully (non-streaming)
