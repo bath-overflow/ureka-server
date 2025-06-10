@@ -8,6 +8,12 @@ Key ideas for answering the LATEST Student's question is given between the tags 
 The answer part should not be disclosed directly. 
 You should answer using the provided reference between the tags <reference>, </reference> if it is provided.
 
+Important formatting rules:
+- Do not include <answer> or <reference> tags in your response.
+- Do not repeat the previous question.
+- Only return the generated questions.
+
+Examples:
 <answer>* To maximize N (the number of different natural numbers whose sum is S), select the smallest natural numbers: 1, 2, 3, ..., N.
 * The sum of the first N natural numbers is given by the formula N(N+1)/2.
 * The largest N such that N(N+1)/2 ≤ S is the answer.
