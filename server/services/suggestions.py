@@ -1,16 +1,14 @@
 from typing import Dict, List, Optional, TypedDict
-from langgraph.graph import END, StateGraph
-from langgraph.graph.message import add_messages
-from langchain_core.messages import AIMessage, HumanMessage, AnyMessage
-from datetime import datetime
 
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+from langgraph.graph import END, StateGraph
+
+from server.repositories.document_store import get_documents_by_project
 from server.routers.chat import chat_service
+from server.services.document import get_markdown_content
 from server.services.llm import llm
 from server.services.prompt import PromptService
-from server.services.document import get_markdown_content
-from server.models.chat_model import ChatMessage, ChatHistory
-from server.repositories.document_store import get_documents_by_project
-from server.utils.db import minio_client
+from server.utils.db import get_db
 
 # test_file_content = """
 # 프롬프팅(Prompting)은 인공지능 언어 모델에게 원하는 응답을 얻기 위해 입력 문장을 설계하는 기술입니다. 프롬프트의 구조, 문맥, 명확성은 모델의 응답 품질에 큰 영향을 미칩니다. 예를 들어, "AI란 무엇인가요?"라는 단순 질문보다 "AI의 정의와 역사적 발전 과정을 간단히 설명해 주세요."라는 구체적인 프롬프트가 더 나은 응답을 이끌어냅니다.
@@ -27,6 +25,7 @@ class SuggestionState(TypedDict):
     collection_name: str
     messages: List[AnyMessage]
     suggested_questions: Optional[List[str]]
+
 
 class SuggestionService:
     def __init__(self, db):
@@ -45,15 +44,18 @@ class SuggestionService:
 
     def _load_chat_history(self, state: SuggestionState) -> Dict:
         collection_name = state.get("collection_name")
- 
+
         chat_history = chat_service.get_history(collection_name)
 
         if chat_history is None or not chat_history.messages:
             return {"messages": [], "collection_name": collection_name}
 
         messages = [
-            HumanMessage(content=msg.message)
-            if msg.role == "user" else AIMessage(content=msg.message)
+            (
+                HumanMessage(content=msg.message)
+                if msg.role == "user"
+                else AIMessage(content=msg.message)
+            )
             for msg in chat_history.messages
         ]
 
@@ -77,7 +79,11 @@ class SuggestionService:
         full_prompt = prompt_template + f"\n\n{history_str}"
 
         response = llm.invoke([HumanMessage(content=full_prompt)])
-        questions = [line.strip("- ").strip() for line in response.content.strip().split("\n") if line.strip()]
+        questions = [
+            line.strip("- ").strip()
+            for line in response.content.strip().split("\n")
+            if line.strip()
+        ]
         return {"suggested_questions": questions}
 
     def _suggest_from_lecture(self, collection_name: str) -> Dict:
@@ -86,19 +92,20 @@ class SuggestionService:
         return {"suggested_questions": questions}
 
     def _summarize_lecture(self, collection_name: str) -> str:
-        get documents metadata list from db 
+        relational_db = get_db()
         documents = get_documents_by_project(self.db, collection_name)
         if not documents:
-           return "No lecture document found for this session."
+            return "No lecture document found for this session."
 
-        bucket_name = "markdowns"
         file_content = ""
-        #file_content = test_file_content
-        
+        # file_content = test_file_content
+
         for doc in documents:
             try:
                 # read markdown contents
-                content = get_markdown_content(db, collection_name, doc.filename)
+                content = get_markdown_content(
+                    relational_db, collection_name, doc.filename
+                )
                 if content.strip():
                     file_content += f"\n\n# Document: {doc.filename}\n{content.strip()}"
             except Exception as e:
@@ -107,8 +114,7 @@ class SuggestionService:
 
         if not file_content.strip():
             raise ValueError("All lecture documents are empty or failed to load.")
-        
-        
+
         prompt_template = self.prompt_service.get_prompt("lecture_summary_prompt.txt")
         full_prompt = prompt_template + f"\n\n{file_content}"
 
@@ -117,11 +123,17 @@ class SuggestionService:
 
     def _generate_questions_from_summary(self, summary: str) -> List[str]:
 
-        prompt_template = self.prompt_service.get_prompt("suggestion_lecture_prompt.txt")
+        prompt_template = self.prompt_service.get_prompt(
+            "suggestion_lecture_prompt.txt"
+        )
         full_prompt = prompt_template + f"\n\n{summary}"
 
         response = llm.invoke([HumanMessage(content=full_prompt)])
-        return [line.strip("- ").strip() for line in response.content.strip().split("\n") if line.strip()]
+        return [
+            line.strip("- ").strip()
+            for line in response.content.strip().split("\n")
+            if line.strip()
+        ]
 
     def _format_history(self, messages: List[AnyMessage]) -> str:
         history = ""
