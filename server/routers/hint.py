@@ -5,7 +5,7 @@ from server.services.hint import HintService
 hint_router = APIRouter()
 hint_service = HintService()
 
-@hint_router.post("/chat/{chat_id}/hint")
+@hint_router.get("/chat/{chat_id}/hint")
 async def get_hint(
     chat_id: str = Path(..., description="Chat session ID")
 ):

@@ -88,14 +88,17 @@ class SuggestionService:
 
     def _suggest_from_lecture(self, collection_name: str) -> Dict:
         summary = self._summarize_lecture(collection_name)
-        questions = self._generate_questions_from_summary(summary)
+        if not summary:
+            questions = "추천 질문을 생성하기 위해, 강의자료를 먼저 올려 주세요."
+        else:
+            questions = self._generate_questions_from_summary(summary)
         return {"suggested_questions": questions}
 
     def _summarize_lecture(self, collection_name: str) -> str:
         relational_db = get_db()
         documents = get_documents_by_project(self.db, collection_name)
         if not documents:
-            return "No lecture document found for this session."
+            return None
 
         file_content = ""
         # file_content = test_file_content

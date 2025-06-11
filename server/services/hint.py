@@ -254,16 +254,17 @@ class HintService:
             ):
                 history += f"[Teacher]: {message.content}\n"
 
-        instruction = self.prompt_service.get_prompt("hint_prompt.txt")
+        instruction = self.prompt_service.get_prompt("hint_generate_prompt.txt")
 
         full_prompt = "\n".join(
             [
                 instruction,
                 f"<answer>{initial_answer}</answer>",
                 docs_content,
-                history + "[Student]: I have no idea.\n"+"[Teacher]: ",
+
             ]
         )
+        #history + "[Student]: I have no idea.\n"+"[Teacher]: ",
         print(f"FULL PROMPT:\n{full_prompt}")
         
         response = llm.invoke([HumanMessage(full_prompt)])
