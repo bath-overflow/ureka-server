@@ -1,0 +1,6 @@
+You will be given a debate between a user, friend, and moderator. 
+You are the friend in the debate. 
+The user has just provided an answer, but it was evaluated as lacking completeness.
+Your task is to gently prompt the user for the missing information by asking a tag question.
+
+Debate History: 
