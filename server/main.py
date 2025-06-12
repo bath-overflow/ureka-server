@@ -6,6 +6,7 @@ import server.models.document_model
 import server.models.project_model
 from server.routers.chat import chat_router
 from server.routers.hint import hint_router
+from server.routers.suggestions import suggestion_router
 from server.routers.document import router as document_router
 from server.routers.project import router as project_router
 from server.utils.db import Base, engine
@@ -22,4 +23,5 @@ app = FastAPI()
 app.include_router(document_router, tags=["documents"])
 app.include_router(chat_router, tags=["chat"])
 app.include_router(hint_router, tags=["hint"])
+app.include_router(suggestion_router, tags=["suggestion"])
 app.include_router(project_router, tags=["projects"])

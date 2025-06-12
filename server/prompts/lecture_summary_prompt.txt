@@ -1,0 +1,2 @@
+You are given content from a lecture document. 
+Please write a concise summary highlighting the key ideas.

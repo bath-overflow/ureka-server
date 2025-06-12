@@ -19,9 +19,38 @@ from server.services.prompt import PromptService
 from datetime import datetime
 from server.models.chat_model import ChatMessage, ChatHistory
 
+#테스트용 ChatHistory 생성
+# test_chat_history = ChatHistory(
+#     id="0f0f26c4-9787-4452-b3fb-886be6e97fd0",
+#     messages=[
+#         ChatMessage(
+#             role="user",
+#             message="프롬프트 엔지니어링이 뭔가요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="assistant",
+#             message="프롬프트 엔지니어링은 LLM이 원하는 출력을 내도록 질문이나 명령을 설계하는 방법이에요. 왜 이런 기술이 필요한지 생각해본 적 있나요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="user",
+#             message="LLM이 가끔 엉뚱한 답을 줄 때가 있어서 그런 것 같아요.",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="assistant",
+#             message="맞아요. 그럼 어떤 요소들이 잘 설계된 프롬프트를 만들게 해줄까요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         )
+#     ],
+# )
+
 # --- State Definition ---
 class State(TypedDict):
     prev_question: Optional[str]
+    hint: Optional[str]
+    references: Optional[List[str]]
     initial_answer: Optional[str]
     messages: Annotated[list[AnyMessage], add_messages]
     collection_name: Optional[str]
@@ -37,18 +66,15 @@ class HintService:
         graph_builder = StateGraph(State)
 
         # Add nodes
-        graph_builder.add_node("load_chat_history", self._load_chat_history)
         graph_builder.add_node("pre_retrieve", self._pre_retrieve)
         graph_builder.add_node("tools", self._create_tool_node())
         graph_builder.add_node("generate_initial_answer", self._generate_initial_answer)
         graph_builder.add_node("generate_hint", self._generate_hint)
-        graph_builder.add_node("cleanup_messages", self._cleanup_messages)
 
         # Set entry point
-        graph_builder.set_entry_point("load_chat_history")
+        graph_builder.set_entry_point("pre_retrieve")
 
         # Add edges
-        graph_builder.add_edge("load_chat_history", "pre_retrieve")
         graph_builder.add_conditional_edges(
             "pre_retrieve",
             self._route_after_query,
@@ -56,8 +82,7 @@ class HintService:
         )
         graph_builder.add_edge("tools", "generate_initial_answer")
         graph_builder.add_edge("generate_initial_answer", "generate_hint")
-        graph_builder.add_edge("generate_hint", "cleanup_messages")
-        graph_builder.add_edge("cleanup_messages", END)
+        graph_builder.add_edge("generate_hint", END)
 
         return graph_builder.compile()
 
@@ -65,7 +90,7 @@ class HintService:
     def _create_tool_node() -> ToolNode:
         """Create a tool node for document retrieval."""
 
-        @tool
+        @tool(response_format="content_and_artifact")
         def retrieve(
             query: str,
             collection_name: Annotated[str, InjectedState("collection_name")],
@@ -82,36 +107,44 @@ class HintService:
                 f"--- Retrieved {len(retrieved_docs)} documents from collection "
                 f"'{collection_name}' ---"
             )
-            return [
-                {"page_content": doc.page_content, "metadata": doc.metadata}
-                for doc in retrieved_docs
-            ]
+            
+            content = ""
+            if retrieved_docs:
+                content = "\n\n".join(
+                    f"<source>{doc.metadata.get('source', 'N/A')}</source>"
+                    + f"<content>{doc.page_content}</content>"
+                    for doc in retrieved_docs
+                )
+            print(f"CONTENT:\n{content}")
+            return content, retrieved_docs
 
         return ToolNode([retrieve])
 
-    def _load_chat_history(self, state: State) -> Dict[str, List[AnyMessage]]:
-        """Load chat history from ChatHistory at the start of the graph."""
-        print("--- Loading chat history ---")
-        collection_name = state.get("collection_name")
-        if not collection_name:
-            print("Error: No collection name found in state for load_chat_history")
-            raise ValueError("Collection name not found in state")
+    # def _load_chat_history(self, state: State) -> Dict[str, List[AnyMessage]]:
+    #     """Load chat history from ChatHistory at the start of the graph."""
+    #     print("--- Loading chat history ---")
+    #     collection_name = state.get("collection_name")
+    #     if not collection_name:
+    #         print("Error: No collection name found in state for load_chat_history")
+    #         raise ValueError("Collection name not found in state")
 
-        # Get chat history from ChatService
-        messages, _ = self._get_messages_and_last_ai_question(collection_name)
+    #     # Get previous question from llm
+    #     messages, prev_question = self._get_messages_and_last_ai_question(collection_name)
 
-        print(f"--- Loaded {len(messages)} messages from chat history ---")
-        return {"messages": messages}
+    #     print(f"--- Loaded {len(messages)} messages from chat history ---")
+    #     return {
+    #         "prev_question": prev_question,
+    #         "messages": messages,
+    #     }
 
     def _pre_retrieve(self, state: State) -> Dict[str, List[AnyMessage]]:
         """
         Given the query, decide whether to retrieve documents or use LLM knowledge.
         """
-        print("--- Pre-retrieve: Analyzing query ---")
-        prev_question = state.get("prev_question")
-        if not prev_question:
-            print("Error: No previous question found in state for pre_retrieve")
-            raise ValueError("User query not found in state")
+        all_messages = state.get("messages", [])
+        if not all_messages:
+            print("Error: No messages found in state for pre_retrieve")
+            raise ValueError("Messages not found in state for pre_retrieve")
 
         collection_name = state.get("collection_name")
         if not collection_name:
@@ -122,107 +155,10 @@ class HintService:
             [self._create_tool_node().tools_by_name["retrieve"]]
         )
 
-        prompt = (
-            "You are an assistant that decides whether external knowledge is needed to",
-            "answer a question.\n",
-            "Given the following question, decide if you need to search for additional",
-            "context from documents.\n",
-            "If document retrieval is needed, call the retrieve tool with a",
-            "well-formed search query.\n\n",
-            f"Question: {prev_question}\n\n",
-            "Think carefully - if this is a question about specific information that",
-            "might be in the uploaded documents,",
-            "use the retrieve tool. If it's general knowledge or doesn't require",
-            "specific document content, answer simply 'PASS'.\n",
-        )
-
-        response = llm_with_tools.invoke([HumanMessage(content=prompt)])
-        return {"messages": [response]}
-
-    def _generate_initial_answer(self, state: State) -> Dict[str, str]:
-        """Generate the initial concise answer to the user's query."""
-        prev_question = state.get("prev_question")
-        if not prev_question:
-            print("Error: prev_question not found in state for generate_initial_answer")
-            raise ValueError("Previous question not found in state")
-
-        # Check if there are tool messages (retrieval results)
-        recent_tool_messages = []
-        for message in reversed(state.get("messages", [])):
-            if isinstance(message, ToolMessage):
-                recent_tool_messages.append(message)
-            else:
-                break
-        tool_messages = recent_tool_messages[::-1]
-
-        # Format retrieved documents if any
-        docs_content = ""
-        if tool_messages:
-            docs_content = "\n\n".join(
-                f"Source: {res['metadata'].get('source', 'N/A')}, "
-                f"Split Index: {res['metadata'].get('split_idx', 'N/A')}\n"
-                f"Content: {res['page_content']}\n"
-                for msg in tool_messages
-                for res in (msg.content if isinstance(msg.content, list) else [])
-                if isinstance(res, dict)
-            )
-            docs_content = f"<reference>{docs_content}</reference>\n"
-
-        # Generate initial answer
-        prompt_template = self.prompt_service.get_prompt("genai_query_prompt.txt")
-        msg_content = prompt_template + f"\n\n{prev_question}\n\n{docs_content}"
-        response = llm.invoke([HumanMessage(content=msg_content)])
-        answer = response.content
-
-        print("--- Initial Answer Generated ---")
-        return {"initial_answer": answer}
-
-    def _generate_hint(self, state: State) -> Dict[str, List[AIMessage]]:
-        """
-        Generate the final response using hint prompt, initial answer, and retrieval
-        results.
-        """
-        print("--- Teacher: Generating Response with Context ---")
-        prev_question = state.get("prev_question")
-        initial_answer = state.get("initial_answer")
-
-        if not prev_question or not initial_answer:
-            print(
-                "Error: missing prev_question or initial_answer in generate_final_answer"
-            )
-            raise ValueError("Missing required state elements")
-
-        recent_tool_messages = []
-        for message in reversed(state.get("messages", [])):
-            if isinstance(message, ToolMessage):
-                recent_tool_messages.append(message)
-            else:
-                break
-        tool_messages = recent_tool_messages[::-1]
-
-        # Format retrieved documents
-        docs_content = ""
-        if tool_messages:
-            docs_content = "\n\n".join(
-                f"Source: {res['metadata'].get('source', 'N/A')}, "
-                f"Split Index: {res['metadata'].get('split_idx', 'N/A')}\n"
-                f"Content: {res['page_content']}\n"
-                for msg in tool_messages
-                for res in (msg.content if isinstance(msg.content, list) else [])
-                if isinstance(res, dict)
-            )
-            docs_content = f"<reference>{docs_content}</reference>\n"
-
-        template = self.prompt_service.get_prompt("hint_prompt.txt")
-        template += f"<query>{prev_question}</query>\n"
-        template += f"<answer>{initial_answer}</answer>\n"
-        template += docs_content
+        instruction = self.prompt_service.get_prompt("hint_pre_retrieve_prompt.txt")
 
         history = ""
-        messages_for_history = [
-            m for m in state.get("messages", []) if not isinstance(m, ToolMessage)
-        ]
-        for message in messages_for_history:
+        for message in all_messages:
             if isinstance(message, HumanMessage):
                 history += f"[Student]: {message.content}\n"
             elif (
@@ -232,43 +168,130 @@ class HintService:
             ):
                 history += f"[Teacher]: {message.content}\n"
 
-        message_content = template + history + "[Teacher]: "
-        response = llm.invoke([HumanMessage(message_content)])
+        full_prompt = f"{instruction}\n{history}\n"
 
-        student_part_start_idx = response.content.find("[Student]")
-        if student_part_start_idx != -1:
-            response.content = response.content[:student_part_start_idx].strip()
+        print(f"--- Pre-retrieve: Analyzing {len(all_messages)} messages. ---")
 
+        # Invoke the LLM with the instruction and the full conversation history
+        response = llm_with_tools.invoke([HumanMessage(content=full_prompt)])
+
+        # The response is an AIMessage, which might contain tool calls
+        # or the content "PASS".
         return {"messages": [response]}
 
-    def _cleanup_messages(self, state: State) -> Dict[str, List[RemoveMessage]]:
+    def _generate_initial_answer(self, state: State) -> Dict[str, str]:
+        """Generate the initial concise answer to previous question."""
+        prev_question = state.get("prev_question")
+        if not prev_question:
+            print("Error: prev_question not found in state for generate_initial_answer")
+            raise ValueError("Previous question not found in state")
+
+        all_messages = state.get("messages", [])
+        if not all_messages:
+            print("Error: No messages found in state for generate_initial_answer")
+            raise ValueError("Messages not found in state")
+
+        # Check if there are tool messages (retrieval results)
+        recent_tool_messages = []
+        for message in reversed(all_messages):
+            if isinstance(message, ToolMessage):
+                recent_tool_messages.append(message)
+            else:
+                break
+        tool_messages = recent_tool_messages[::-1]
+
+        # Format retrieved documents if any
+        docs_content = ""
+        if tool_messages:
+            docs_content = "\n".join(tool_msg.content for tool_msg in tool_messages)
+            docs_content = f"<reference>{docs_content}</reference>\n"
+
+        # Generate initial answer
+        prompt_template = self.prompt_service.get_prompt("hint_query_prompt.txt")
+        full_prompt = prompt_template + f"\n\n{prev_question}\n\n{docs_content}"
+        response = llm.invoke([HumanMessage(content=full_prompt)])
+        answer = response.content
+        
+        print("--- Initial Answer Generated ---")
+        return {
+            "initial_answer": answer,
+            "references": docs_content,
+        }
+
+    def _generate_hint(self, state: State) -> Dict[str, list[str]]:
         """
-        Clean up the message history by removing tool calls, tool messages, and 'PASS'
-        messages."""
-        print("--- Cleaning up message history ---")
+        Generate the final response using hint prompt, initial answer, and retrieval
+        results.
+        """
+        print("--- Teacher: Generating Response with Context ---")
+        prev_question = state.get("prev_question")
+        if not prev_question:
+            print("Error: prev_question not found in state for generate_hint")
+            raise ValueError("Previous question not found in state")
+        
+        initial_answer = state.get("initial_answer")
+        if not initial_answer:
+            print("Error: initial_answer not found in state for generate_hint")
+            raise ValueError("Initial answer not found in state")
+        
+        all_messages = state.get("messages", [])
+        if not all_messages:
+            print("Error: No messages found in state for generate_hint")
+            raise ValueError("Messages not found in state")
 
-        messages = state.get("messages", [])
-        message_to_remove_ids = []
+        docs_content = state.get("references", [])
 
-        for message in messages:
-            # Remove AI messages with tool calls
-            if isinstance(message, AIMessage) and message.tool_calls:
-                message_to_remove_ids.append(message.id)
-
-            # Remove Tool Messages
-            elif isinstance(message, ToolMessage):
-                message_to_remove_ids.append(message.id)
-
-            # Remove AI messages that just say "PASS"
+        print(f"DOCS CONTENT:\n{docs_content}")
+        
+        history = ""
+        for message in all_messages:
+            if isinstance(message, HumanMessage):
+                history += f"[Student]: {message.content}\n"
             elif (
                 isinstance(message, AIMessage)
-                and message.content.strip().lower() == "pass"
+                and not message.tool_calls
+                and not message.content.strip().lower() == "pass"
             ):
-                message_to_remove_ids.append(message.id)
+                history += f"[Teacher]: {message.content}\n"
 
-        # Create RemoveMessage objects for each index to remove
-        remove_messages = [RemoveMessage(id=id) for id in message_to_remove_ids]
-        return {"messages": remove_messages}
+        instruction = self.prompt_service.get_prompt("hint_generate_prompt.txt")
+
+        full_prompt = "\n".join(
+            [
+                instruction,
+                f"<answer>{initial_answer}</answer>",
+                docs_content,
+
+            ]
+        )
+        #history + "[Student]: I have no idea.\n"+"[Teacher]: ",
+        print(f"FULL PROMPT:\n{full_prompt}")
+        
+        response = llm.invoke([HumanMessage(full_prompt)])
+        
+        # reference 다듬기
+        import re
+        reference_pattern = re.compile(
+            r"<reference>\s*<source>(.*?)</source>\s*<content>(.*?)</content>\s*</reference>",
+            re.DOTALL
+        )
+        references = []
+        for match in reference_pattern.finditer(docs_content):
+            source = match.group(1).strip()
+            content = match.group(2).strip()
+            references.append({
+                "file_name": source,
+                "content": content,
+            })
+    
+        # reference 없을 시 fallback
+        if not references:
+            references = [{"file_name": "None", "content": "None"}]
+
+        return {
+            "hint": response.content,
+            "references": references,
+        }
 
     @staticmethod
     def _route_after_query(state: State) -> Literal["tools", "generate_initial_answer"]:
@@ -294,15 +317,17 @@ class HintService:
         )
         return "generate_initial_answer"
 
-    def _get_messages_and_last_ai_question(self, chat_id: str) -> tuple[list[AnyMessage], str]:
+    def _get_messages_and_last_ai_question(self, chat_id: str) -> tuple[Optional[list[AnyMessage]], Optional[str]]:
         """
         Fetch chat history and return LangChain message list and last AI question.
         """
         from server.routers.chat import chat_service
         
         chat_history = chat_service.get_history(chat_id)
+        #chat_history = test_chat_history
+        
         if chat_history is None:
-            raise ValueError(f"No chat history found for collection '{chat_id}'")
+            return None, None
 
         # Convert to messages
         messages = [
@@ -327,22 +352,28 @@ class HintService:
 
     async def generate_hint_response(
         self, chat_id: str
-    ) -> str:
+    ) -> tuple[str, list[str]]:
         """
         Generate hint responses from the AI.
         Args:
             chat_id: Identifier for the chat/collection
         Yields:
             The full generated hint response as a string.
+            Refered lecture notes.
         """
         try:
             # Get previous question from llm
             messages, prev_question = self._get_messages_and_last_ai_question(chat_id)
             
+            if not messages:
+                hint = "아직 답변할 내용이 없습니다."
+                references = ["None"]
+                return hint, references
+            
             # Prepare input for the graph
             graph_input = {
-                "prev_question": prev_question,
                 "collection_name": chat_id,
+                "prev_question": prev_question,
                 "messages": messages,
             }
 
@@ -350,15 +381,15 @@ class HintService:
             final_state = await self.graph.ainvoke(graph_input)
 
             # Extract final message (typically from generate_hint)
-            messages = final_state.get("messages", [])
-            for message in reversed(messages):
-                if isinstance(message, AIMessage):
-                    return message.content.strip()
+            hint = final_state.get("hint")
+            references = final_state.get("references", [])
+            if not references:
+                references = ["None"]
 
-            return "[No hint response generated.]"
+            return hint, references
 
         except Exception as e:
             error_msg = f"Error in generate_chat_response: {str(e)}"
             print(f"Error processing message for chat {chat_id}: {e}")
             traceback.print_exc()
-            return f"[ERROR: {error_msg}]"
+            return f"[ERROR: {error_msg}]", ["None"]
