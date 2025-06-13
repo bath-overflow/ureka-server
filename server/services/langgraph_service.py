@@ -252,34 +252,30 @@ class LangGraphService:
         tool_messages = recent_tool_messages[::-1]
 
         # Format retrieved documents if any
-        docs_content = ""
+        reference = ""
         if tool_messages:
-            docs_content = "\n".join(tool_msg.content for tool_msg in tool_messages)
-            docs_content = f"<reference>{docs_content}</reference>\n"
+            reference = "\n".join(tool_msg.content for tool_msg in tool_messages)
 
-        history = ""
+        dialogue_history = ""
         for message in all_messages:
             if isinstance(message, HumanMessage):
-                history += f"[Student]: {message.content}\n"
+                dialogue_history += f"[Student]: {message.content}\n"
             elif (
                 isinstance(message, AIMessage)
                 and not message.tool_calls
                 and not message.content.strip().lower() == "pass"
             ):
-                history += f"[Teacher]: {message.content}\n"
+                dialogue_history += f"[Teacher]: {message.content}\n"
 
         instruction = self.prompt_service.get_prompt("teacher_prompt.txt")
 
-        full_prompt = "\n".join(
-            [
-                instruction,
-                f"<answer>{initial_answer}</answer>",
-                docs_content,
-                history + "[Teacher]: ",
-            ]
+        prompt = instruction.format(
+            dialogue_history=dialogue_history,
+            reference=reference,
+            key_ideas=initial_answer,
         )
 
-        response = llm.invoke([HumanMessage(full_prompt)])
+        response = llm.invoke([HumanMessage(prompt)])
 
         return {"messages": [response]}
 
