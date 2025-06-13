@@ -15,7 +15,10 @@ from pydantic import ValidationError
 from server.models.chat_model import ChatHistoryResponse, ChatMessage
 from server.services.chat import ChatEvent, ChatInfo
 from server.services.chat import service as chat_service
-from server.services.langgraph_service import stream_chat_response
+from server.services.langgraph_service import (
+    stream_chat_response,
+    stream_simple_chat_response,
+)
 
 chat_router = APIRouter()
 
@@ -319,4 +322,130 @@ async def get_chat_history(chat_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve chat history: {str(e)}",
+        )
+
+
+@chat_router.post("/chat/{chat_id}")
+async def chat_http(chat_id: str, message_data: ChatMessage):
+    """
+    HTTP POST endpoint for sending a chat message and getting AI response
+
+    Args:
+        chat_id: The chat session ID
+        message_data: ChatMessage object with role and message content
+
+    Returns:
+        JSON response with the AI's reply
+    """
+    if not chat_id or not chat_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid chat_id"
+        )
+
+    if not message_data.message or not message_data.message.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Empty message not allowed"
+        )
+
+    if message_data.role != "user":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role: Only 'user' role is allowed",
+        )
+
+    try:
+        # Save user message to chat history
+        chat_service.save_message(chat_id, message_data)
+
+        # Generate AI response using the same method as WebSocket
+        full_response = await chat_service.generate_and_stream_message_to_user(
+            chat_id,
+            message_data.message,
+            stream_chat_response,
+        )
+
+        # Save AI response to chat history
+        if full_response:
+            assistant_message = ChatMessage(
+                role="assistant",
+                message=full_response,
+            )
+            chat_service.save_message(chat_id, assistant_message)
+
+            return {
+                "ai_response": full_response,
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate AI response",
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process chat message: {str(e)}",
+        )
+
+
+@chat_router.post("/simple-chat/{chat_id}")
+async def simple_chat_http(chat_id: str, message_data: ChatMessage):
+    """
+    HTTP POST endpoint for sending a chat message and getting AI response
+
+    Args:
+        chat_id: The chat session ID
+        message_data: ChatMessage object with role and message content
+
+    Returns:
+        JSON response with the AI's reply
+    """
+    if not chat_id or not chat_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid chat_id"
+        )
+
+    if not message_data.message or not message_data.message.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Empty message not allowed"
+        )
+
+    if message_data.role != "user":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role: Only 'user' role is allowed",
+        )
+
+    try:
+        # Save user message to chat history
+        chat_service.save_message(chat_id, message_data)
+
+        # Generate AI response using the same method as WebSocket
+        full_response = await chat_service.generate_and_stream_message_to_user(
+            chat_id,
+            message_data.message,
+            stream_simple_chat_response,
+        )
+
+        # Save AI response to chat history
+        if full_response:
+            assistant_message = ChatMessage(
+                role="assistant",
+                message=full_response,
+            )
+            chat_service.save_message(chat_id, assistant_message)
+
+            return {
+                "ai_response": full_response,
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate AI response",
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process chat message: {str(e)}",
         )
