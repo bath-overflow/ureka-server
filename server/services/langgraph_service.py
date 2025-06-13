@@ -363,3 +363,79 @@ async def stream_chat_response(
     """
     async for token in lang_graph_service.stream_chat_response(chat_id, user_message):
         yield token
+
+
+class SimpleChatGraphService(LangGraphService):
+    """
+    A simplified version of LangGraphService for basic chat functionality.
+    This service does not include document retrieval or complex routing.
+    Thus the graph is as follows:
+    load chat history -> generate response -> END
+    """
+
+    def _build_graph(self) -> CompiledStateGraph:
+        """Build and compile the simplified LangGraph."""
+        graph_builder = StateGraph(State)
+
+        # Add nodes
+        graph_builder.add_node("load_chat_history", self._load_chat_history)
+        graph_builder.add_node("generate_final_answer", self._generate_response)
+
+        # Set entry point
+        graph_builder.set_entry_point("load_chat_history")
+
+        # Add edges
+        graph_builder.add_edge("load_chat_history", "generate_final_answer")
+        graph_builder.add_edge("generate_final_answer", END)
+
+        return graph_builder.compile()
+
+    def _generate_response(self, state: State) -> Dict[str, List[AIMessage]]:
+        """
+        Generate a response based on the chat history.
+        This is a simplified version that does not use tools or retrieval.
+        """
+        all_messages = state.get("messages", [])
+        if not all_messages:
+            print("Error: No messages found in state for generate_response")
+            raise ValueError("Messages not found in state for generate_response")
+
+        history = ""
+        for message in all_messages:
+            if isinstance(message, HumanMessage):
+                history += f"[User]: {message.content}\n"
+            elif (
+                isinstance(message, AIMessage)
+                and not message.tool_calls
+                and not message.content.strip().lower() == "pass"
+            ):
+                history += f"[Teacher]: {message.content}\n"
+
+        instruction = self.prompt_service.get_prompt("simple_teacher_prompt.txt")
+
+        prompt = instruction.format(dialogue_history=history)
+
+        response = llm.invoke([HumanMessage(content=prompt)])
+
+        return {"messages": [response]}
+
+
+# Create a singleton instance for the simplified chat service
+simple_chat_graph_service = SimpleChatGraphService()
+
+
+async def stream_simple_chat_response(
+    chat_id: str, user_message: str
+) -> AsyncGenerator[str, None]:
+    """
+    Stream chat responses from the SimpleChatGraphService.
+    Args:
+        chat_id: Identifier for the chat/collection
+        user_message: The message from the user
+    Yields:
+        Tokens from the AI response as they're generated
+    """
+    async for token in simple_chat_graph_service.stream_chat_response(
+        chat_id, user_message
+    ):
+        yield token
