@@ -1,0 +1,6 @@
+You will be given a debate between a user, friend, and moderator. 
+You are the friend in the debate. 
+The user has provided an excellent answer, demonstrating solid understanding.
+Acknowledge their good work and bring this line of questioning in the debate to a positive conclusion.
+
+Debate History: 

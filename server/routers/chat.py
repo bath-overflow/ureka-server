@@ -1,5 +1,4 @@
 import json
-import random
 import traceback
 import uuid
 
@@ -15,6 +14,7 @@ from pydantic import ValidationError
 from server.models.chat_model import ChatHistoryResponse, ChatMessage
 from server.services.chat import ChatEvent, ChatInfo
 from server.services.chat import service as chat_service
+from server.services.debate_graph_service import stream_debate_response
 from server.services.langgraph_service import stream_chat_response
 
 chat_router = APIRouter()
@@ -181,6 +181,47 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
         )
 
         while True:
+            user_message = ChatMessage(role="user", message="dummy message")
+
+            # Process and stream AI response
+            try:
+                # Use debate_graph_service to generate and stream responses
+                full_response = await chat_service.generate_and_stream_message_to_user(
+                    debate_chat_id,
+                    user_message.message,
+                    stream_debate_response,
+                )
+
+                # Save the complete response to chat history
+                if full_response:
+                    # full_response format: "[ROLE] message"
+                    parts = full_response.split(" ", 1)
+                    parts[0] = parts[0].strip("[]")  # Remove brackets if present
+
+                    if len(parts) > 1:
+                        role = parts[0].lower()  # Convert "FRIEND" to "friend"
+                        message = parts[1].strip()
+                    else:
+                        # Warning: Unexpected format, handle gracefully
+                        role = "assistant"
+                        message = full_response
+
+                    debate_message = ChatMessage(
+                        role=role,
+                        message=message,
+                    )
+                    chat_service.save_message(debate_chat_id, debate_message)
+
+            except Exception as e:
+                error_msg = f"Failed to generate response: {str(e)}"
+                await chat_service.send_message_to_user(
+                    debate_chat_id, ChatEvent.ERROR.value, error_msg
+                )
+                print(
+                    f"AI response generation error for debate chat {debate_chat_id}: {str(e)}"
+                )
+                traceback.print_exc()
+
             data = await websocket.receive_text()
             # Parse incoming message
             try:
@@ -232,48 +273,6 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
                 ChatEvent.MESSAGE_RECEIVED.value,
                 "Processing your message...",
             )
-
-            # Process and stream AI response
-            try:
-                # TODO Implement Generate Debate response
-                roles = ["friend", "moderator"]
-                selected_role = random.choice(roles)
-
-                # Simulate a debate response
-                debate_response = f"[{selected_role.upper()}] I understand your point, but let me offer a different perspective..."
-
-                # Send the response
-                # TODO Stream message to client
-                await chat_service.send_message_to_user(
-                    debate_chat_id,
-                    ChatEvent.SEND_MESSAGE.value,
-                    debate_response,
-                )
-
-                # Save the response to chat history
-                assistant_message = ChatMessage(
-                    role=selected_role,
-                    message=debate_response,
-                )
-                chat_service.save_message(debate_chat_id, assistant_message)
-
-                # Signal end of stream
-                await chat_service.send_message_to_user(
-                    debate_chat_id,
-                    ChatEvent.SEND_MESSAGE.value,
-                    ChatInfo.END_OF_STREAM.value,
-                )
-
-            except Exception as e:
-                error_msg = f"Failed to generate response: {str(e)}"
-                await chat_service.send_message_to_user(
-                    debate_chat_id, ChatEvent.ERROR.value, error_msg
-                )
-                print(
-                    f"AI response generation error for debate chat {debate_chat_id}: {str(e)}"
-                )
-                traceback.print_exc()
-
     except WebSocketDisconnect:
         if connection_established:
             chat_service.disconnect_user(debate_chat_id)

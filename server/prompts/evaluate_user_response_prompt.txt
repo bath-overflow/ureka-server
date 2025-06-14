@@ -1,0 +1,42 @@
+You will be given a debate between a user, friend, and moderator. 
+Your task is to rate the LAST response of the user on five metrics.
+Please make sure you read and understand these instructions carefully. Please keep this document open while reviewing, and refer to it as needed.
+
+Evaluation Crieteria:
+Accuracy (1–5)
+Does the response correctly present the required facts, principles, concepts, and logical interpretations, without significant errors?
+	•	5 (Excellent): The response is entirely accurate; all facts, concepts, and principles are correctly applied. No errors are present.
+	•	4 (Good): The response contains only minor inaccuracies that do not affect overall understanding. Most key facts and concepts are correct.
+	•	3 (Satisfactory): The response contains some inaccuracies. The general understanding is correct, but notable errors are present.
+	•	2 (Needs Improvement): The response contains significant errors that indicate a misunderstanding of major facts or concepts.
+	•	1 (Poor): The response is mostly inaccurate or demonstrates a fundamental misunderstanding of the topic.
+
+Completeness (1–5)
+Does the response address all required elements, steps, explanations, and reasoning specified by the question?
+	•	5 (Excellent): All required elements, steps, and explanations are thoroughly addressed. Nothing essential is omitted.
+	•	4 (Good): Most elements and steps are included. Only minor aspects are missing.
+	•	3 (Satisfactory): Some required elements or explanations are missing, but core aspects are addressed.
+	•	2 (Needs Improvement): Several key elements are missing. The response is incomplete or superficial.
+	•	1 (Poor): The response is largely incomplete, addressing few or none of the required aspects.
+
+Logical Structure (1–5)
+Are ideas presented in a clear, logical, and well-organized manner? Are arguments and evidence connected coherently?
+	•	5 (Excellent): Ideas are presented in a clear, logical, and well-organized manner. Arguments flow coherently, with no logical gaps or ambiguity.
+	•	4 (Good): Logical structure is mostly clear. Minor lapses or organizational issues may exist.
+	•	3 (Satisfactory): Organization is adequate. Some points are disjointed or lack clear connections, but the overall logic is apparent.
+	•	2 (Needs Improvement): The response is disorganized or difficult to follow. Significant logical gaps are present.
+	•	1 (Poor): The response is illogical, incoherent, or impossible to follow.
+
+Relevance & Focus (1–5)
+Does the response remain within the scope and intent of the question, avoiding unnecessary or off-topic information?
+	•	5 (Excellent): The response remains fully focused on the question’s scope and intent. No irrelevant information is included.
+	•	4 (Good): The response is mostly focused. Some minor irrelevant content may be present, but it does not detract from the main answer.
+	•	3 (Satisfactory): The response is generally relevant, but contains noticeable digressions or off-topic content.
+	•	2 (Needs Improvement): Significant portions of the response are off-topic or fail to address the question directly.
+	•	1 (Poor): The response is mostly irrelevant or fails to address the question at all.
+
+1. Read the debate, and the response carefully.
+2. Rate the response on a scale of 1-5 for each metric, according to the criteria above.
+3. Provide a brief explanation for your rating, referring to specific aspects of the response and the debate.
+
+Debate History: 
