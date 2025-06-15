@@ -182,50 +182,40 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
             ChatInfo.CONNECTED.value,
         )
 
+        try:
+            initial_prompt = (
+                "Let me begin. What do you think about the topic we're discussing?"
+            )
+            full_response = await chat_service.generate_and_stream_message_to_user(
+                debate_chat_id,
+                initial_prompt,
+                stream_debate_response,
+            )
+
+            if full_response:
+                parts = full_response.split(" ", 1)
+                parts[0] = parts[0].strip("[]")
+                if len(parts) > 1:
+                    role = parts[0].lower()
+                    message = parts[1].strip()
+                else:
+                    role = "friend"
+                    message = full_response
+
+                debate_message = ChatMessage(role=role, message=message)
+                chat_service.save_message(debate_chat_id, debate_message)
+
+        except Exception as e:
+            await chat_service.send_message_to_user(
+                debate_chat_id,
+                ChatEvent.ERROR.value,
+                f"Failed to start debate: {str(e)}",
+            )
+            print(f"[INIT] Debate intro error: {e}")
+
         while True:
-            user_message = ChatMessage(role="user", message="dummy message")
-
-            # Process and stream AI response
-            try:
-                # Use debate_graph_service to generate and stream responses
-                full_response = await chat_service.generate_and_stream_message_to_user(
-                    debate_chat_id,
-                    user_message.message,
-                    stream_debate_response,
-                )
-
-                # Save the complete response to chat history
-                if full_response:
-                    # full_response format: "[ROLE] message"
-                    parts = full_response.split(" ", 1)
-                    parts[0] = parts[0].strip("[]")  # Remove brackets if present
-
-                    if len(parts) > 1:
-                        role = parts[0].lower()  # Convert "FRIEND" to "friend"
-                        message = parts[1].strip()
-                    else:
-                        # Warning: Unexpected format, handle gracefully
-                        role = "assistant"
-                        message = full_response
-
-                    debate_message = ChatMessage(
-                        role=role,
-                        message=message,
-                    )
-                    chat_service.save_message(debate_chat_id, debate_message)
-
-            except Exception as e:
-                error_msg = f"Failed to generate response: {str(e)}"
-                await chat_service.send_message_to_user(
-                    debate_chat_id, ChatEvent.ERROR.value, error_msg
-                )
-                print(
-                    f"AI response generation error for debate chat {debate_chat_id}: {str(e)}"
-                )
-                traceback.print_exc()
-
             data = await websocket.receive_text()
-            # Parse incoming message
+
             try:
                 data_dict = json.loads(data)
                 if data_dict.get("type") == "ping":
@@ -271,24 +261,56 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
                 )
                 continue
 
-            # Notify client that we received the message
             await chat_service.send_message_to_user(
                 debate_chat_id,
                 ChatEvent.MESSAGE_RECEIVED.value,
                 "Processing your message...",
             )
+
+            try:
+                full_response = await chat_service.generate_and_stream_message_to_user(
+                    debate_chat_id,
+                    user_message.message,
+                    stream_debate_response,
+                )
+
+                if full_response:
+                    parts = full_response.split(" ", 1)
+                    parts[0] = parts[0].strip("[]")
+
+                    if len(parts) > 1:
+                        role = parts[0].lower()
+                        message = parts[1].strip()
+                    else:
+                        role = "assistant"
+                        message = full_response
+
+                    debate_message = ChatMessage(
+                        role=role,
+                        message=message,
+                    )
+                    chat_service.save_message(debate_chat_id, debate_message)
+
+            except Exception as e:
+                error_msg = f"Failed to generate response: {str(e)}"
+                await chat_service.send_message_to_user(
+                    debate_chat_id, ChatEvent.ERROR.value, error_msg
+                )
+                print(
+                    f"AI response generation error for debate chat {debate_chat_id}: {str(e)}"
+                )
+                traceback.print_exc()
+
     except WebSocketDisconnect:
         if connection_established:
             chat_service.disconnect_user(debate_chat_id)
             print(f"Client {debate_chat_id} disconnected from debate.")
     except Exception as e:
-        # Unexpected error
         print(
             f"Unexpected error in debate WebSocket handler for chat {debate_chat_id}: {str(e)}"
         )
         traceback.print_exc()
 
-        # Try to send error to client if connection is still valid
         if connection_established:
             try:
                 error_message = f"Server error: {str(e)}"
@@ -298,7 +320,6 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
             except Exception as e:
                 print(f"Failed to send error message to client: {str(e)}")
 
-            # Ensure cleanup
             chat_service.disconnect_user(debate_chat_id)
 
 
