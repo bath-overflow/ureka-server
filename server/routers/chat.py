@@ -57,6 +57,8 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
             # Parse incoming message
             try:
                 data_dict = json.loads(data)
+                if data_dict.get("type") == "ping":
+                    continue  # Just ignore ping messages
                 user_message = ChatMessage.model_validate(data_dict)
             except json.JSONDecodeError:
                 await chat_service.send_message_to_user(
@@ -226,6 +228,8 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
             # Parse incoming message
             try:
                 data_dict = json.loads(data)
+                if data_dict.get("type") == "ping":
+                    continue  # Just ignore ping messages
                 user_message = ChatMessage.model_validate(data_dict)
             except json.JSONDecodeError:
                 await chat_service.send_message_to_user(
