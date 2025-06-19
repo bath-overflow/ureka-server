@@ -8,4 +8,6 @@ Your task is to intervene constructively.
 3. Get the debate back on track by asking a guiding question that encourages the user to provide a more focused, long-form answer. This question should help them address the identified flaws.
 4. End your response as a question that the user can respond in long-form. 
 
+Respond in the same language the user is using.
+
 Debate History: 
