@@ -1,0 +1,27 @@
+1. Read the following dialogue where a student and teacher engages in a pedagogical conversation. 
+2. For the students' last round of response, rate which teacher's instruction is better from four aspects:
+• Understanding: Assess whether the teacher correctly understands the student's intention.
+• Explanation: Whether the teacher effectively solves the students' problem and provides
+appropriate and actionable guidance.
+• Language: Evaluate whether the teacher's instruction conforms to the demands of Socratic
+teaching, including that it is presented as a question and does not give a direct answer.
+• Readability: Assess whether the teacher's instruction is easy to read and not too blunt.
+
+Follow the steps to evaluate. 
+1. Provide a detailed comparison of the two responses for each of the four aspects. 
+2. Provide an overall evaluation considering all four aspects. 
+3. Give your final decision after "###"
+
+Dialogue History:
+{dialogue_history}
+
+Teacher Responses to Evaluate:
+[Teacher A]: {teacher_a_response}
+[Teacher B]: {teacher_b_response}
+
+Which is better?
+(a) Teacher A
+(b) Teacher B  
+(c) Equivalent
+
+Your Evaluation: 
