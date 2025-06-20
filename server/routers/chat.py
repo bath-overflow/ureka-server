@@ -2,6 +2,7 @@ import json
 import random
 import traceback
 import uuid
+from typing import List
 
 from fastapi import (
     APIRouter,
@@ -449,3 +450,119 @@ async def simple_chat_http(chat_id: str, message_data: ChatMessage):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process chat message: {str(e)}",
         )
+
+
+@chat_router.post("/set-chat-history/{chat_id}")
+async def set_chat_history(chat_id: str, messages: List[ChatMessage]):
+    """
+    Set the complete chat history for a given chat ID
+
+    Args:
+        chat_id: The chat session ID
+        messages: List of ChatMessage objects with role and message content
+
+    Returns:
+        JSON response confirming the chat history was set
+    """
+    if not chat_id or not chat_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid chat_id"
+        )
+
+    if not messages:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Messages list cannot be empty",
+        )
+
+    try:
+        # Clear existing chat history by replacing it with a new empty one
+        from server.repositories.chat_store import create_or_replace_chat_history
+
+        # Create a new empty chat history, replacing any existing one
+        create_or_replace_chat_history(chat_id)
+
+        # Save each message to the new chat history
+        for message in messages:
+            if not message.message or not message.message.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Empty message not allowed in chat history",
+                )
+
+            chat_service.save_message(chat_id, message)
+
+        return {
+            "status": "success",
+            "message": f"Chat history set successfully for chat_id: {chat_id}",
+            "messages_count": len(messages),
+        }
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to set chat history: {str(e)}",
+        )
+
+
+if __name__ == "__main__":
+    # Check if set_chat_history works
+
+    import asyncio
+
+    from server.repositories.chat_store import create_chat_history
+
+    chat_id = "test_chat_123"
+    send_messages = [
+        ChatMessage(role="user", message="Hello, this is a test message."),
+        ChatMessage(role="assistant", message="Hello! How can I assist you today?"),
+    ]
+
+    try:
+        create_chat_history(chat_id)
+        for msg in send_messages:
+            chat_service.save_message(chat_id, msg)
+    except Exception as e:
+        print(f"Failed to set chat history: {str(e)}")
+
+    chat_history = get_chat_history(chat_id)
+    if chat_history:
+        saved_messages = chat_history.messages
+        for m1, m2 in zip(send_messages, saved_messages):
+            assert m1.role == m2.role, f"Role mismatch: {m1.role} != {m2.role}"
+            assert (
+                m1.message == m2.message
+            ), f"Message mismatch: {m1.message} != {m2.message}"
+
+    else:
+        print(f"No chat history found for chat_id: {chat_id}")
+        raise Exception(f"Chat history not found for chat_id: {chat_id}")
+
+    # Now check if set_chat_history works
+    new_messages = [
+        ChatMessage(
+            role="user", message="This is a new message after setting history."
+        ),
+        ChatMessage(
+            role="assistant", message="This is the AI's response to the new message"
+        ),
+    ]
+
+    # set_chat_history(chat_id, new_messages)
+    asyncio.run(set_chat_history(chat_id, new_messages))
+
+    # Verify the new messages were set correctly
+    chat_history = get_chat_history(chat_id)
+    if chat_history:
+        saved_messages = chat_history.messages
+        for m1, m2 in zip(new_messages, saved_messages[-len(new_messages) :]):
+            assert m1.role == m2.role, f"Role mismatch: {m1.role} != {m2.role}"
+            assert (
+                m1.message == m2.message
+            ), f"Message mismatch: {m1.message} != {m2.message}"
+    else:
+        print(f"No chat history found for chat_id: {chat_id}")
+        raise Exception(f"Chat history not found for chat_id: {chat_id}")

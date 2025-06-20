@@ -33,6 +33,19 @@ def create_chat_history(chat_id: str) -> ChatHistory:
     return chat_history
 
 
+def create_or_replace_chat_history(chat_id: str) -> ChatHistory:
+    """
+    Create a new chat history or replace an existing one with an empty chat history.
+    """
+    chat_history = ChatHistory(id=chat_id, messages=[])
+    chat_history_collection.replace_one(
+        {"id": chat_id},
+        chat_history.model_dump(),
+        upsert=True,
+    )
+    return chat_history
+
+
 def get_chat_history(chat_id: str) -> ChatHistory | None:
     """
     Retrieve a chat history by project_id.
