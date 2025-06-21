@@ -7,6 +7,9 @@ for each chat history subset, allowing comparison between different AI models.
 
 Usage:
     python collect_endpoint_responses.py --base_url http://localhost:8000 --input_dir data_collection_logs/subsets --output_dir response_collection_logs
+
+    # To reuse existing simple-chat responses and only fetch new /chat responses:
+    python collect_endpoint_responses.py --base_url http://localhost:8000 --input_dir data_collection_logs/subsets --output_dir response_collection_logs --reuse_simple_chat path/to/existing_responses.json
 """
 
 import argparse
@@ -30,11 +33,17 @@ class TeacherResponseCollector:
         base_url: str = "http://localhost:8000",
         input_dir: str = "data_collection_logs/subsets",
         output_dir: str = "response_collection_logs",
+        reuse_simple_chat_file: Optional[str] = None,
     ):
         self.base_url = base_url.rstrip("/")
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Load existing simple-chat responses if specified
+        self.existing_simple_chat_responses = {}
+        if reuse_simple_chat_file:
+            self.load_existing_simple_chat_responses(reuse_simple_chat_file)
 
         # API endpoints
         self.set_history_endpoint = f"{self.base_url}/set-chat-history"
@@ -44,6 +53,41 @@ class TeacherResponseCollector:
         # Session for connection reuse
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
+
+    def load_existing_simple_chat_responses(self, file_path: str) -> None:
+        """
+        Load existing simple-chat responses from a previous collection file
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            # Extract simple-chat responses by subset_id
+            if "results" in data:
+                for result in data["results"]:
+                    subset_id = result.get("subset_id")
+                    simple_chat_response = result.get("responses", {}).get(
+                        "simple-chat"
+                    )
+
+                    if subset_id and simple_chat_response is not None:
+                        self.existing_simple_chat_responses[subset_id] = (
+                            simple_chat_response
+                        )
+
+            print(
+                f"📚 Loaded {len(self.existing_simple_chat_responses)} existing simple-chat responses from {file_path}"
+            )
+
+        except FileNotFoundError:
+            print(f"❌ Error: Reuse file not found: {file_path}")
+            raise
+        except json.JSONDecodeError as e:
+            print(f"❌ Error: Invalid JSON in reuse file: {e}")
+            raise
+        except Exception as e:
+            print(f"❌ Error loading existing responses: {e}")
+            raise
 
     def load_subset_files(self) -> List[Dict]:
         """
@@ -177,7 +221,7 @@ class TeacherResponseCollector:
             "responses": {},
         }
 
-        # Test /chat endpoint
+        # Handle /chat endpoint (always fetch new response)
         print("   🔄 Get response from /chat endpoint...")
         chat_id_1 = self.create_fresh_chat_id()
 
@@ -189,19 +233,25 @@ class TeacherResponseCollector:
             result["error"] = "Failed to set chat history in chat endpoint"
             return result
 
-        # Test /simple-chat endpoint
-        print("   🔄 Get response from /simple-chat endpoint...")
-        chat_id_2 = self.create_fresh_chat_id()
-
-        if self.set_chat_history(chat_id_2, history_messages):
-            simple_chat_response = self.get_chat_response(
-                chat_id_2, last_user_message, "simple-chat"
-            )
-            result["responses"]["simple-chat"] = simple_chat_response
+        # Handle /simple-chat endpoint (reuse existing or fetch new)
+        if subset_id in self.existing_simple_chat_responses:
+            print("   📚 Reusing existing simple-chat response...")
+            result["responses"]["simple-chat"] = self.existing_simple_chat_responses[
+                subset_id
+            ]
         else:
-            result["success"] = False
-            result["error"] = "Failed to set chat history in simple-chat endpoint"
-            return result
+            print("   🔄 Get response from /simple-chat endpoint...")
+            chat_id_2 = self.create_fresh_chat_id()
+
+            if self.set_chat_history(chat_id_2, history_messages):
+                simple_chat_response = self.get_chat_response(
+                    chat_id_2, last_user_message, "simple-chat"
+                )
+                result["responses"]["simple-chat"] = simple_chat_response
+            else:
+                result["success"] = False
+                result["error"] = "Failed to set chat history in simple-chat endpoint"
+                return result
 
         # Determine overall success
         result["success"] = (
@@ -256,6 +306,10 @@ class TeacherResponseCollector:
         print(f"🌐 Base URL: {self.base_url}")
         print(f"📂 Input directory: {self.input_dir}")
         print(f"📁 Output directory: {self.output_dir}")
+        if self.existing_simple_chat_responses:
+            print(
+                f"📚 Reusing {len(self.existing_simple_chat_responses)} existing simple-chat responses"
+            )
         if max_subsets:
             print(f"🔢 Max subsets to process: {max_subsets}")
         print("=" * 60)
@@ -350,6 +404,11 @@ def main():
         type=int,
         help="Maximum number of subsets to process (for testing)",
     )
+    parser.add_argument(
+        "--reuse_simple_chat",
+        type=str,
+        help="Path to existing response JSON file to reuse simple-chat responses",
+    )
 
     args = parser.parse_args()
 
@@ -361,11 +420,16 @@ def main():
     print(f"   Output directory: {args.output_dir}")
     if args.max_subsets:
         print(f"   Max subsets: {args.max_subsets}")
+    if args.reuse_simple_chat:
+        print(f"   Reuse simple-chat responses from: {args.reuse_simple_chat}")
     print()
 
     try:
         collector = TeacherResponseCollector(
-            base_url=args.base_url, input_dir=args.input_dir, output_dir=args.output_dir
+            base_url=args.base_url,
+            input_dir=args.input_dir,
+            output_dir=args.output_dir,
+            reuse_simple_chat_file=args.reuse_simple_chat,
         )
         results = collector.run(max_subsets=args.max_subsets)
 
