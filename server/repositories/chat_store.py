@@ -56,6 +56,14 @@ def get_chat_history(chat_id: str) -> ChatHistory | None:
     return None
 
 
+def remove_chat_history(chat_id: str) -> bool:
+    """
+    Remove a chat history by chat_id.
+    """
+    result = chat_history_collection.delete_one({"id": chat_id})
+    return result.deleted_count == 1
+
+
 def append_chat_message(chat_id: str, message: ChatMessage) -> ChatHistory | None:
     """
     Append a chat message to the chat history.

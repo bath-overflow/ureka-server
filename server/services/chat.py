@@ -86,11 +86,14 @@ class ChatService:
             create_chat_history(chat_id)
         append_chat_message(chat_id, message)
 
-    def get_history(self, chat_id: str) -> ChatHistory | None:
+    def get_history(self, chat_id: str) -> ChatHistory:
         """
         특정 채팅방의 메시지 히스토리 가져오기
         """
-        return get_chat_history(chat_id)
+        chat_history = get_chat_history(chat_id)
+        if not chat_history:
+            return create_chat_history(chat_id)
+        return chat_history
 
     def disconnect_user(self, chat_id: str):
         """

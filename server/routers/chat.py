@@ -315,10 +315,7 @@ async def get_chat_history(chat_id: str):
 
     try:
         chat_history = chat_service.get_history(chat_id)
-        if chat_history:
-            return chat_history
-        else:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return chat_history
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -469,12 +466,6 @@ async def set_chat_history(chat_id: str, messages: List[ChatMessage]):
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid chat_id"
         )
 
-    if not messages:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Messages list cannot be empty",
-        )
-
     try:
         # Clear existing chat history by replacing it with a new empty one
         from server.repositories.chat_store import create_or_replace_chat_history
@@ -513,7 +504,13 @@ if __name__ == "__main__":
 
     import asyncio
 
-    from server.repositories.chat_store import create_chat_history
+    from server.repositories.chat_store import (
+        create_chat_history,
+    )
+    from server.repositories.chat_store import get_chat_history as get_chat_history_repo
+    from server.repositories.chat_store import (
+        remove_chat_history,
+    )
 
     chat_id = "test_chat_123"
     send_messages = [
@@ -522,13 +519,14 @@ if __name__ == "__main__":
     ]
 
     try:
+        remove_chat_history(chat_id)
         create_chat_history(chat_id)
         for msg in send_messages:
             chat_service.save_message(chat_id, msg)
     except Exception as e:
         print(f"Failed to set chat history: {str(e)}")
 
-    chat_history = get_chat_history(chat_id)
+    chat_history = get_chat_history_repo(chat_id)
     if chat_history:
         saved_messages = chat_history.messages
         for m1, m2 in zip(send_messages, saved_messages):
@@ -555,7 +553,7 @@ if __name__ == "__main__":
     asyncio.run(set_chat_history(chat_id, new_messages))
 
     # Verify the new messages were set correctly
-    chat_history = get_chat_history(chat_id)
+    chat_history = get_chat_history_repo(chat_id)
     if chat_history:
         saved_messages = chat_history.messages
         for m1, m2 in zip(new_messages, saved_messages[-len(new_messages) :]):
@@ -563,6 +561,20 @@ if __name__ == "__main__":
             assert (
                 m1.message == m2.message
             ), f"Message mismatch: {m1.message} != {m2.message}"
+    else:
+        print(f"No chat history found for chat_id: {chat_id}")
+        raise Exception(f"Chat history not found for chat_id: {chat_id}")
+
+    # Test for empty messages
+    new_messages_empty = []
+
+    asyncio.run(set_chat_history(chat_id, new_messages_empty))
+    chat_history = get_chat_history_repo(chat_id)
+    if chat_history:
+        saved_messages = chat_history.messages
+        assert (
+            len(saved_messages) == 0
+        ), f"Expected no messages, but found {len(saved_messages)}"
     else:
         print(f"No chat history found for chat_id: {chat_id}")
         raise Exception(f"Chat history not found for chat_id: {chat_id}")
