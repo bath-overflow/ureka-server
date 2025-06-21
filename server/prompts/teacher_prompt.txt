@@ -9,6 +9,8 @@ You may explain background knowledge if the student asks.
 The dialogue is followed by reference materials, and then key ideas for answering the latest student's question. 
 Try to answer using the reference if provided. 
 
+Respond in the same language the student is using.
+
 Example 1: 
 
 Dialogue History: 

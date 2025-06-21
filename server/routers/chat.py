@@ -1,5 +1,4 @@
 import json
-import random
 import traceback
 import uuid
 from typing import List
@@ -16,6 +15,7 @@ from pydantic import ValidationError
 from server.models.chat_model import ChatHistoryResponse, ChatMessage
 from server.services.chat import ChatEvent, ChatInfo
 from server.services.chat import service as chat_service
+from server.services.debate_graph_service import stream_debate_response
 from server.services.langgraph_service import (
     stream_chat_response,
     stream_simple_chat_response,
@@ -61,6 +61,8 @@ async def chat_websocket(websocket: WebSocket, chat_id: str = None):
             # Parse incoming message
             try:
                 data_dict = json.loads(data)
+                if data_dict.get("type") == "ping":
+                    continue  # Just ignore ping messages
                 user_message = ChatMessage.model_validate(data_dict)
             except json.JSONDecodeError:
                 await chat_service.send_message_to_user(
@@ -184,11 +186,44 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
             ChatInfo.CONNECTED.value,
         )
 
+        try:
+            initial_prompt = (
+                "Let me begin. What do you think about the topic we're discussing?"
+            )
+            full_response = await chat_service.generate_and_stream_message_to_user(
+                debate_chat_id,
+                initial_prompt,
+                stream_debate_response,
+            )
+
+            if full_response:
+                parts = full_response.split(" ", 1)
+                parts[0] = parts[0].strip("[]")
+                if len(parts) > 1:
+                    role = parts[0].lower()
+                    message = parts[1].strip()
+                else:
+                    role = "friend"
+                    message = full_response
+
+                debate_message = ChatMessage(role=role, message=message)
+                chat_service.save_message(debate_chat_id, debate_message)
+
+        except Exception as e:
+            await chat_service.send_message_to_user(
+                debate_chat_id,
+                ChatEvent.ERROR.value,
+                f"Failed to start debate: {str(e)}",
+            )
+            print(f"[INIT] Debate intro error: {e}")
+
         while True:
             data = await websocket.receive_text()
-            # Parse incoming message
+
             try:
                 data_dict = json.loads(data)
+                if data_dict.get("type") == "ping":
+                    continue  # Just ignore ping messages
                 user_message = ChatMessage.model_validate(data_dict)
             except json.JSONDecodeError:
                 await chat_service.send_message_to_user(
@@ -230,43 +265,35 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
                 )
                 continue
 
-            # Notify client that we received the message
             await chat_service.send_message_to_user(
                 debate_chat_id,
                 ChatEvent.MESSAGE_RECEIVED.value,
                 "Processing your message...",
             )
 
-            # Process and stream AI response
             try:
-                # TODO Implement Generate Debate response
-                roles = ["friend", "moderator"]
-                selected_role = random.choice(roles)
-
-                # Simulate a debate response
-                debate_response = f"[{selected_role.upper()}] I understand your point, but let me offer a different perspective..."
-
-                # Send the response
-                # TODO Stream message to client
-                await chat_service.send_message_to_user(
+                full_response = await chat_service.generate_and_stream_message_to_user(
                     debate_chat_id,
-                    ChatEvent.SEND_MESSAGE.value,
-                    debate_response,
+                    user_message.message,
+                    stream_debate_response,
                 )
 
-                # Save the response to chat history
-                assistant_message = ChatMessage(
-                    role=selected_role,
-                    message=debate_response,
-                )
-                chat_service.save_message(debate_chat_id, assistant_message)
+                if full_response:
+                    parts = full_response.split(" ", 1)
+                    parts[0] = parts[0].strip("[]")
 
-                # Signal end of stream
-                await chat_service.send_message_to_user(
-                    debate_chat_id,
-                    ChatEvent.SEND_MESSAGE.value,
-                    ChatInfo.END_OF_STREAM.value,
-                )
+                    if len(parts) > 1:
+                        role = parts[0].lower()
+                        message = parts[1].strip()
+                    else:
+                        role = "assistant"
+                        message = full_response
+
+                    debate_message = ChatMessage(
+                        role=role,
+                        message=message,
+                    )
+                    chat_service.save_message(debate_chat_id, debate_message)
 
             except Exception as e:
                 error_msg = f"Failed to generate response: {str(e)}"
@@ -283,13 +310,11 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
             chat_service.disconnect_user(debate_chat_id)
             print(f"Client {debate_chat_id} disconnected from debate.")
     except Exception as e:
-        # Unexpected error
         print(
             f"Unexpected error in debate WebSocket handler for chat {debate_chat_id}: {str(e)}"
         )
         traceback.print_exc()
 
-        # Try to send error to client if connection is still valid
         if connection_established:
             try:
                 error_message = f"Server error: {str(e)}"
@@ -299,7 +324,6 @@ async def debate_websocket(websocket: WebSocket, chat_id: str):
             except Exception as e:
                 print(f"Failed to send error message to client: {str(e)}")
 
-            # Ensure cleanup
             chat_service.disconnect_user(debate_chat_id)
 
 
