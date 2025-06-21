@@ -169,7 +169,7 @@ class TeacherResponseCollector:
             }
 
         last_user_message = messages[-1].get("message", "")
-        history_messages = messages[:]  # All messages
+        history_messages = messages[:-1]  # All messages except the last user message
 
         result = {
             "subset_id": subset_id,
