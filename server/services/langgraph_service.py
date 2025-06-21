@@ -228,102 +228,6 @@ class ChatGraphService:
         print(f"--- Initial Answer Generated (for query: '{user_query}') ---")
         return {"initial_answer": answer}
 
-    def _critique_and_revise(
-        self,
-        teacher_response: str,
-        dialogue_history: str,
-        reference: str,
-        iteration: int = 1,
-    ) -> str:
-        """
-        Critique and revise a teacher response using Constitutional AI.
-
-        Args:
-            teacher_response: The teacher response to critique and revise
-            dialogue_history: The dialogue history context
-            reference: The reference materials context
-            iteration: The iteration number for logging purposes
-
-        Returns:
-            The revised teacher response, or original if revision fails
-        """
-        try:
-            # Load critique/revision configuration
-            prompt_dir = os.path.join(os.path.dirname(__file__), "../prompts")
-            critique_revise_path = os.path.join(prompt_dir, "critique_revise.json")
-            if not os.path.exists(critique_revise_path):
-                print(
-                    f"Error: critique_revise.json not found at {critique_revise_path}"
-                )
-                return teacher_response
-            with open(critique_revise_path, "r") as f:
-                critique_revise_configs = json.load(f)
-
-            # Randomly select a critique/revision configuration
-            config = random.choice(critique_revise_configs)
-            critique_request = config["critique_request"]
-            revision_request = config["revision_request"]
-        except Exception as e:
-            print(f"Error loading critique_revise.json (iteration {iteration}): {e}")
-            return teacher_response
-
-        # Generate critique
-        try:
-            critique_prompt_template = self.prompt_service.get_prompt(
-                "critique_prompt.txt"
-            )
-            critique_prompt = critique_prompt_template.format(
-                dialogue_history=dialogue_history,
-                reference=reference,
-                teacher_response=teacher_response,
-                critique_request=critique_request,
-            )
-
-            critique_response_obj = llm.invoke([HumanMessage(critique_prompt)])
-            critique = (
-                critique_response_obj.content
-                if isinstance(critique_response_obj.content, str)
-                else str(critique_response_obj.content)
-            )
-            print(
-                f"--- Generated critique for teacher response (iteration {iteration}) ---"
-            )
-            print(f"Critique: ###{critique}")
-        except Exception as e:
-            print(f"Error generating critique (iteration {iteration}): {e}")
-            return teacher_response
-
-        # Generate revision based on critique
-        try:
-            revision_prompt_template = self.prompt_service.get_prompt(
-                "revision_prompt.txt"
-            )
-            revision_prompt = revision_prompt_template.format(
-                dialogue_history=dialogue_history,
-                reference=reference,
-                teacher_response=teacher_response,
-                critique_request=critique_request,
-                critique=critique,
-                revision_request=revision_request,
-            )
-
-            llm_call_config = {"tags": [f"iteration_{iteration}"]}
-            revision_response_obj = llm.invoke(
-                [HumanMessage(revision_prompt)], config=llm_call_config
-            )
-            revised_response = (
-                revision_response_obj.content
-                if isinstance(revision_response_obj.content, str)
-                else str(revision_response_obj.content)
-            )
-            revised_response = revised_response.removeprefix("[Teacher]: ")
-            print(f"--- Generated revised response (it {iteration}) ---")
-            print(f"Revised Response: ###{revised_response}")
-            return revised_response
-        except Exception as e:
-            print(f"Error generating revision (it {iteration}): {e}")
-            return teacher_response
-
     def _generate_final_answer(self, state: State) -> Dict[str, List[AIMessage]]:
         """
         Generate the final response using teacher prompt, initial answer, and retrieval
@@ -383,16 +287,86 @@ class ChatGraphService:
             if isinstance(response_obj.content, str)
             else str(response_obj.content)
         )
-        print(f"Initial Response: ###{current_response}")
-
         # Step 2: Apply multiple rounds of critique and revision
         for i in range(CHAT_CRITIQUE_REVISE_ITERATIONS):
-            current_response = self._critique_and_revise(
-                teacher_response=current_response,
-                dialogue_history=dialogue_history,
-                reference=reference,
-                iteration=i + 1,
-            )
+            iteration = i + 1
+
+            # Load critique/revision configuration
+            try:
+                prompt_dir = os.path.join(os.path.dirname(__file__), "../prompts")
+                critique_revise_path = os.path.join(prompt_dir, "critique_revise.json")
+                if not os.path.exists(critique_revise_path):
+                    print(
+                        f"Error: critique_revise.json not found at {critique_revise_path}"
+                    )
+                    break
+                with open(critique_revise_path, "r") as f:
+                    critique_revise_configs = json.load(f)
+
+                # Randomly select a critique/revision configuration
+                config = random.choice(critique_revise_configs)
+                critique_request = config["critique_request"]
+                revision_request = config["revision_request"]
+            except Exception as e:
+                print(
+                    f"Error loading critique_revise.json (iteration {iteration}): {e}"
+                )
+                break
+
+            # Generate critique
+            try:
+                critique_prompt_template = self.prompt_service.get_prompt(
+                    "critique_prompt.txt"
+                )
+                critique_prompt = critique_prompt_template.format(
+                    dialogue_history=dialogue_history,
+                    reference=reference,
+                    teacher_response=current_response,
+                    critique_request=critique_request,
+                )
+
+                critique_response_obj = llm.invoke([HumanMessage(critique_prompt)])
+                critique = (
+                    critique_response_obj.content
+                    if isinstance(critique_response_obj.content, str)
+                    else str(critique_response_obj.content)
+                )
+                print(
+                    f"--- Generated critique for teacher response (iteration {iteration}) ---"
+                )
+            except Exception as e:
+                print(f"Error generating critique (iteration {iteration}): {e}")
+                break
+
+            # Generate revision based on critique
+            try:
+                revision_prompt_template = self.prompt_service.get_prompt(
+                    "revision_prompt.txt"
+                )
+                revision_prompt = revision_prompt_template.format(
+                    dialogue_history=dialogue_history,
+                    reference=reference,
+                    teacher_response=current_response,
+                    critique_request=critique_request,
+                    critique=critique,
+                    revision_request=revision_request,
+                )
+
+                llm_call_config = {"tags": [f"iteration_{iteration}"]}
+                revision_response_obj = llm.invoke(
+                    [HumanMessage(revision_prompt)], config=llm_call_config
+                )
+                revised_response = (
+                    revision_response_obj.content
+                    if isinstance(revision_response_obj.content, str)
+                    else str(revision_response_obj.content)
+                )
+                revised_response = revised_response.removeprefix("[Teacher]: ")
+                current_response = revised_response
+                print(f"--- Generated revised response (it {iteration}) ---")
+            except Exception as e:
+                print(f"Error generating revision (it {iteration}): {e}")
+                break
 
         # Create final AIMessage with the revised response
         final_response = AIMessage(content=current_response)
@@ -443,22 +417,48 @@ class ChatGraphService:
                 "collection_name": chat_id,
             }
 
+            # Buffer to accumulate tokens and detect "[Teacher]: " prefix
+            token_buffer = ""
+            prefix_detected = False
+            prefix_to_remove = "[Teacher]: "
+
             # Stream the response from the graph with token-by-token streaming
             current_node = None
             async for chunk, metadata in self.graph.astream(
                 stream_input,
                 stream_mode="messages",  # Stream token by token
             ):
-                current_node = metadata["langgraph_node"]
+                current_node = metadata.get("langgraph_node")
 
                 # Only stream tokens from the generate_final_answer node
                 if current_node == "generate_final_answer" and isinstance(
                     chunk, AIMessage
                 ):
-                    for tag in metadata.get("tags", []):
-                        if tag == f"iteration_{CHAT_CRITIQUE_REVISE_ITERATIONS}":
-                            content = chunk.content.removeprefix("[Teacher]: ")
-                            yield content
+                    tags = metadata.get("tags", [])
+                    if not f"iteration_{CHAT_CRITIQUE_REVISE_ITERATIONS}" in tags:
+                        continue
+
+                    content = chunk.content
+                    if not isinstance(content, str):
+                        continue
+
+                    if not prefix_detected:
+                        # Buffer the content until we detect the prefix
+                        token_buffer += content
+
+                        # Check if buffer starts with the prefix
+                        if token_buffer.startswith(prefix_to_remove):
+                            # Remove the prefix and yield the remaining content
+                            remaining_content = token_buffer[len(prefix_to_remove) :]
+                            prefix_detected = True
+                            if remaining_content:
+                                yield remaining_content
+                        elif len(token_buffer) >= len(prefix_to_remove):
+                            # Buffer is long enough and doesn't start with prefix -> prefix doesn't exist
+                            prefix_detected = True
+                            yield token_buffer
+                    else:
+                        yield content
 
         except Exception as e:
             error_msg = f"Error in stream_chat_response: {str(e)}"
