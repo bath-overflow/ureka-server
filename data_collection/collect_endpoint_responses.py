@@ -16,8 +16,10 @@ import argparse
 import json
 import traceback
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 from typing import Dict, List, Optional
 
 import requests
@@ -34,11 +36,13 @@ class TeacherResponseCollector:
         input_dir: str = "data_collection_logs/subsets",
         output_dir: str = "response_collection_logs",
         reuse_simple_chat_file: Optional[str] = None,
+        max_workers: int = 4,
     ):
         self.base_url = base_url.rstrip("/")
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.max_workers = max_workers
 
         # Load existing simple-chat responses if specified
         self.existing_simple_chat_responses = {}
@@ -50,9 +54,26 @@ class TeacherResponseCollector:
         self.chat_endpoint = f"{self.base_url}/chat"
         self.simple_chat_endpoint = f"{self.base_url}/simple-chat"
 
-        # Session for connection reuse
-        self.session = requests.Session()
-        self.session.headers.update({"Content-Type": "application/json"})
+        # Session for connection reuse - create per thread
+        # We'll create sessions in the worker threads to avoid sharing issues
+
+        # Thread-safe printing
+        self.print_lock = Lock()
+
+    def thread_safe_print(self, *args, **kwargs):
+        """
+        Thread-safe print function to avoid overlapping output
+        """
+        with self.print_lock:
+            print(*args, **kwargs)
+
+    def create_session(self) -> requests.Session:
+        """
+        Create a new session for HTTP requests
+        """
+        session = requests.Session()
+        session.headers.update({"Content-Type": "application/json"})
+        return session
 
     def load_existing_simple_chat_responses(self, file_path: str) -> None:
         """
@@ -110,7 +131,7 @@ class TeacherResponseCollector:
         print(f"📊 Successfully loaded {len(subsets)} subsets")
         return subsets
 
-    def create_fresh_chat_id(self) -> str:
+    def create_fresh_chat_id(self, session: requests.Session) -> str:
         """
         Create a new project and return its project ID to use as chat ID
         """
@@ -120,14 +141,14 @@ class TeacherResponseCollector:
                 "description": "Auto-generated project for endpoint response collection",
             }
 
-            response = self.session.post(
+            response = session.post(
                 f"{self.base_url}/projects/", json=project_data, timeout=30
             )
 
             if response.status_code == 201:
                 project = response.json()
                 project_id = project.get("id")
-                print(f"   ✅ Created project: {project_id}")
+                self.thread_safe_print(f"   ✅ Created project: {project_id}")
                 return project_id
             else:
                 raise Exception(
@@ -141,29 +162,35 @@ class TeacherResponseCollector:
                 raise  # Re-raise our custom exception
             raise Exception(f"Error creating project: {e}")
 
-    def set_chat_history(self, chat_id: str, messages: List[Dict]) -> bool:
+    def set_chat_history(
+        self, session: requests.Session, chat_id: str, messages: List[Dict]
+    ) -> bool:
         """
         Set the chat history for a given chat ID
         """
         try:
-            response = self.session.post(
+            response = session.post(
                 f"{self.set_history_endpoint}/{chat_id}", json=messages, timeout=30
             )
 
             if response.status_code == 200:
                 return True
             else:
-                print(
+                self.thread_safe_print(
                     f"❌ Failed to set chat history: {response.status_code} - {response.text}"
                 )
                 return False
 
         except Exception as e:
-            print(f"❌ Error setting chat history: {e}")
+            self.thread_safe_print(f"❌ Error setting chat history: {e}")
             return False
 
     def get_chat_response(
-        self, chat_id: str, user_message: str, endpoint_type: str = "chat"
+        self,
+        session: requests.Session,
+        chat_id: str,
+        user_message: str,
+        endpoint_type: str = "chat",
     ) -> Optional[str]:
         """
         Get response from either /chat or /simple-chat endpoint
@@ -175,9 +202,9 @@ class TeacherResponseCollector:
         message_data = {"role": "user", "message": user_message}
 
         try:
-            print(f"   🤖 Getting {endpoint_type} response...")
+            self.thread_safe_print(f"   🤖 Getting {endpoint_type} response...")
 
-            response = self.session.post(
+            response = session.post(
                 f"{endpoint}/{chat_id}", json=message_data, timeout=15
             )
 
@@ -185,13 +212,13 @@ class TeacherResponseCollector:
                 result = response.json()
                 return result.get("ai_response", "")
             else:
-                print(
+                self.thread_safe_print(
                     f"   ❌ {endpoint_type} request failed: {response.status_code} - {response.text}"
                 )
                 return None
 
         except Exception as e:
-            print(f"   ❌ Error getting {endpoint_type} response: {e}")
+            self.thread_safe_print(f"   ❌ Error getting {endpoint_type} response: {e}")
             return None
 
     def process_single_subset(self, subset: Dict) -> Dict:
@@ -199,12 +226,17 @@ class TeacherResponseCollector:
         Process a single subset and collect responses from both endpoints
         """
         subset_id = subset.get("subset_id")
-        print(f"\n📝 Processing subset: {subset_id}")
+        self.thread_safe_print(f"\n📝 Processing subset: {subset_id}")
+
+        # Create a session for this thread
+        session = self.create_session()
 
         # Extract the last user message to send to both endpoints
         messages = subset.get("messages", [])
         if not messages or messages[-1].get("role") != "user":
-            print("   ⚠️  Skipping - subset doesn't end with user message")
+            self.thread_safe_print(
+                "   ⚠️  Skipping - subset doesn't end with user message"
+            )
             return {
                 "subset_id": subset_id,
                 "success": False,
@@ -222,11 +254,13 @@ class TeacherResponseCollector:
         }
 
         # Handle /chat endpoint (always fetch new response)
-        print("   🔄 Get response from /chat endpoint...")
-        chat_id_1 = self.create_fresh_chat_id()
+        self.thread_safe_print("   🔄 Get response from /chat endpoint...")
+        chat_id_1 = self.create_fresh_chat_id(session)
 
-        if self.set_chat_history(chat_id_1, history_messages):
-            chat_response = self.get_chat_response(chat_id_1, last_user_message, "chat")
+        if self.set_chat_history(session, chat_id_1, history_messages):
+            chat_response = self.get_chat_response(
+                session, chat_id_1, last_user_message, "chat"
+            )
             result["responses"]["chat"] = chat_response
         else:
             result["success"] = False
@@ -235,17 +269,17 @@ class TeacherResponseCollector:
 
         # Handle /simple-chat endpoint (reuse existing or fetch new)
         if subset_id in self.existing_simple_chat_responses:
-            print("   📚 Reusing existing simple-chat response...")
+            self.thread_safe_print("   📚 Reusing existing simple-chat response...")
             result["responses"]["simple-chat"] = self.existing_simple_chat_responses[
                 subset_id
             ]
         else:
-            print("   🔄 Get response from /simple-chat endpoint...")
-            chat_id_2 = self.create_fresh_chat_id()
+            self.thread_safe_print("   🔄 Get response from /simple-chat endpoint...")
+            chat_id_2 = self.create_fresh_chat_id(session)
 
-            if self.set_chat_history(chat_id_2, history_messages):
+            if self.set_chat_history(session, chat_id_2, history_messages):
                 simple_chat_response = self.get_chat_response(
-                    chat_id_2, last_user_message, "simple-chat"
+                    session, chat_id_2, last_user_message, "simple-chat"
                 )
                 result["responses"]["simple-chat"] = simple_chat_response
             else:
@@ -260,9 +294,11 @@ class TeacherResponseCollector:
         )
 
         if result["success"]:
-            print("   ✅ Successfully collected responses from both endpoints")
+            self.thread_safe_print(
+                "   ✅ Successfully collected responses from both endpoints"
+            )
         else:
-            print("   ⚠️  Partial success - some endpoints failed")
+            self.thread_safe_print("   ⚠️  Partial success - some endpoints failed")
 
         return result
 
@@ -300,12 +336,13 @@ class TeacherResponseCollector:
 
     def run(self, max_subsets: Optional[int] = None) -> List[Dict]:
         """
-        Main execution method
+        Main execution method with parallel processing
         """
         print("🚀 Starting endpoint response collection")
         print(f"🌐 Base URL: {self.base_url}")
         print(f"📂 Input directory: {self.input_dir}")
         print(f"📁 Output directory: {self.output_dir}")
+        print(f"⚡ Max workers: {self.max_workers}")
         if self.existing_simple_chat_responses:
             print(
                 f"📚 Reusing {len(self.existing_simple_chat_responses)} existing simple-chat responses"
@@ -316,7 +353,8 @@ class TeacherResponseCollector:
 
         # Test server connectivity
         try:
-            response = self.session.get(f"{self.base_url}/docs", timeout=5)
+            test_session = self.create_session()
+            response = test_session.get(f"{self.base_url}/docs", timeout=5)
             if response.status_code == 200:
                 print("✅ Server is reachable")
             else:
@@ -336,30 +374,65 @@ class TeacherResponseCollector:
             subsets = subsets[:max_subsets]
             print(f"🔢 Limited to first {max_subsets} subsets")
 
-        # Process each subset
+        # Process subsets in parallel
         results = []
         failed_count = 0
+        completed_count = 0
 
-        for i, subset in enumerate(subsets, 1):
-            print(f"\n📊 Progress: {i}/{len(subsets)}")
+        print(
+            f"\n🔄 Processing {len(subsets)} subsets with {self.max_workers} workers..."
+        )
 
-            try:
-                result = self.process_single_subset(subset)
-                results.append(result)
+        try:
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                # Submit all tasks
+                future_to_subset = {
+                    executor.submit(self.process_single_subset, subset): subset
+                    for subset in subsets
+                }
 
-                if not result.get("success", False):
-                    failed_count += 1
+                # Process completed tasks as they finish
+                for future in as_completed(future_to_subset):
+                    subset = future_to_subset[future]
+                    subset_id = subset.get("subset_id", "unknown")
 
-            except KeyboardInterrupt:
-                print(f"\n⚠️  Collection interrupted by user after {i-1} subsets")
-                break
-            except Exception as e:
-                print(
-                    f"\n💥 Unexpected error processing subset {subset.get('subset_id', 'unknown')}: {e}"
-                )
-                traceback.print_exc()
-                failed_count += 1
-                continue
+                    try:
+                        result = future.result()
+                        results.append(result)
+                        completed_count += 1
+
+                        if result.get("success", False):
+                            self.thread_safe_print(
+                                f"✅ [{completed_count}/{len(subsets)}] Completed: {subset_id}"
+                            )
+                        else:
+                            self.thread_safe_print(
+                                f"⚠️  [{completed_count}/{len(subsets)}] Partial success: {subset_id}"
+                            )
+                            failed_count += 1
+
+                    except Exception as e:
+                        self.thread_safe_print(
+                            f"💥 [{completed_count + 1}/{len(subsets)}] Error processing {subset_id}: {e}"
+                        )
+                        traceback.print_exc()
+                        failed_count += 1
+                        completed_count += 1
+
+                        # Add a failed result to maintain consistency
+                        results.append(
+                            {
+                                "subset_id": subset_id,
+                                "success": False,
+                                "error": str(e),
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        )
+
+        except KeyboardInterrupt:
+            print(
+                f"\n⚠️  Collection interrupted by user after {completed_count} subsets"
+            )
 
         # Save results
         if results:
@@ -409,6 +482,12 @@ def main():
         type=str,
         help="Path to existing response JSON file to reuse simple-chat responses",
     )
+    parser.add_argument(
+        "--max_workers",
+        type=int,
+        default=4,
+        help="Maximum number of parallel workers (default: 4)",
+    )
 
     args = parser.parse_args()
 
@@ -430,6 +509,7 @@ def main():
             input_dir=args.input_dir,
             output_dir=args.output_dir,
             reuse_simple_chat_file=args.reuse_simple_chat,
+            max_workers=args.max_workers,
         )
         results = collector.run(max_subsets=args.max_subsets)
 

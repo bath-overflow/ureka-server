@@ -1,6 +1,6 @@
 [
     {
         "critique_request": "Identify specific ways the teacher's last response is lacking in the following criteria.\n1. The teacher's instruction conforms to the demands of Socratic teaching, including that it is presented as a question and does not give a direct answer.\n2. The teacher's instruction is based on the content in 'Reference', if the content contains relevant information needed to answer the student's question. This criterion is relevant only when 'Reference' contains content.\nOnly give your evaluation on the weaknesses.",
-        "revision_request": "Please rewrite the teacher's response according to the critique."
+        "revision_request": "Please rewrite the teacher's response according to the critique. If there is nothing to revise, simply repeat the previous response."
     }
 ]
