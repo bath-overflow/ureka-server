@@ -13,8 +13,10 @@ import argparse
 import json
 import os
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -32,12 +34,18 @@ judge_llm = init_chat_model(
 
 class TeacherResponseEvaluator:
     """
-    Evaluates teacher responses using LLM-as-a-judge approach
+    Evaluates teacher responses using LLM-as-a-judge approach with multi-threading support
     """
 
-    def __init__(self, output_dir: str = "evaluation_results"):
+    def __init__(self, output_dir: str = "evaluation_results", max_workers: int = 4):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.max_workers = max_workers
+
+        # Thread-safe locks for shared resources
+        self.print_lock = Lock()
+        self.progress_lock = Lock()
+        self.progress_counter = 0
 
         # Load judge prompt template from file
         prompt_file = Path("evaluation_prompt.txt")
@@ -48,6 +56,19 @@ class TeacherResponseEvaluator:
             raise FileNotFoundError(
                 f"Judge prompt template file not found: {prompt_file}"
             )
+
+    def thread_safe_print(self, message: str):
+        """Thread-safe print function"""
+        with self.print_lock:
+            print(message)
+
+    def update_progress(self, total: int) -> int:
+        """Thread-safe progress counter"""
+        with self.progress_lock:
+            self.progress_counter += 1
+            current = self.progress_counter
+            self.thread_safe_print(f"📊 Progress: {current}/{total}")
+            return current
 
     def format_dialogue_history(self, messages: List[Dict]) -> str:
         """
@@ -93,7 +114,7 @@ class TeacherResponseEvaluator:
             response_time = (end_time - start_time).total_seconds()
 
             # Parse the judge response to extract verdict
-            verdict = self.parse_judge_verdict(judge_response)
+            verdict = self.parse_judge_verdict(str(judge_response))
 
             return {
                 "success": True,
@@ -132,12 +153,18 @@ class TeacherResponseEvaluator:
 
         return "unclear"
 
-    def evaluate_single_comparison(self, result: Dict) -> Dict:
+    def evaluate_single_comparison_threaded(
+        self, result: Dict, total_count: int
+    ) -> Dict:
         """
-        Evaluate a single comparison between two teacher responses
+        Evaluate a single comparison between two teacher responses (thread-safe version)
         """
         subset_id = result.get("subset_id")
-        print(f"\n📝 Evaluating subset: {subset_id}")
+
+        # Update progress
+        self.update_progress(total_count)
+
+        self.thread_safe_print(f"📝 Evaluating subset: {subset_id}")
 
         # Check if we have both responses
         responses = result.get("responses", {})
@@ -145,7 +172,7 @@ class TeacherResponseEvaluator:
         simple_chat_response = responses.get("simple-chat")
 
         if not chat_response or not simple_chat_response:
-            print("   ⚠️  Skipping - missing responses")
+            self.thread_safe_print(f"   ⚠️  Skipping {subset_id} - missing responses")
             return {
                 "subset_id": subset_id,
                 "success": False,
@@ -169,7 +196,9 @@ class TeacherResponseEvaluator:
             dialogue_history = self.format_dialogue_history(messages)
 
         except Exception as e:
-            print(f"   ❌ Error loading subset data: {e}")
+            self.thread_safe_print(
+                f"   ❌ Error loading subset data for {subset_id}: {e}"
+            )
             return {
                 "subset_id": subset_id,
                 "success": False,
@@ -233,7 +262,9 @@ class TeacherResponseEvaluator:
             "timestamp": datetime.now().isoformat(),
         }
 
-        print(f"   ✅ Evaluation complete - Winner: {winner}")
+        self.thread_safe_print(
+            f"   ✅ Evaluation complete for {subset_id} - Winner: {winner}"
+        )
         return evaluation_result
 
     def load_response_data(self, input_file: str) -> List[Dict]:
@@ -338,30 +369,47 @@ class TeacherResponseEvaluator:
             response_results = response_results[:max_evaluations]
             print(f"🔢 Limited to first {max_evaluations} evaluations")
 
-        # Evaluate each comparison
+        # Evaluate comparisons using multi-threading
         evaluations = []
         failed_count = 0
+        total_count = len(response_results)
 
-        for i, result in enumerate(response_results, 1):
-            print(f"\n📊 Progress: {i}/{len(response_results)}")
+        # Reset progress counter
+        self.progress_counter = 0
 
-            try:
-                evaluation = self.evaluate_single_comparison(result)
-                evaluations.append(evaluation)
+        print(f"🔄 Starting parallel evaluation with {self.max_workers} workers...")
 
-                if not evaluation.get("success", False):
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Submit all evaluation tasks
+            future_to_result = {
+                executor.submit(
+                    self.evaluate_single_comparison_threaded, result, total_count
+                ): result
+                for result in response_results
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_result):
+                try:
+                    evaluation = future.result()
+                    evaluations.append(evaluation)
+
+                    if not evaluation.get("success", False):
+                        failed_count += 1
+
+                except KeyboardInterrupt:
+                    print("⚠️  Evaluation interrupted by user")
+                    # Cancel remaining futures
+                    for f in future_to_result:
+                        f.cancel()
+                    break
+                except Exception as e:
+                    result = future_to_result[future]
+                    subset_id = result.get("subset_id", "unknown")
+                    print(f"💥 Unexpected error evaluating {subset_id}: {e}")
+                    traceback.print_exc()
                     failed_count += 1
-
-            except KeyboardInterrupt:
-                print(f"\n⚠️  Evaluation interrupted by user after {i-1} evaluations")
-                break
-            except Exception as e:
-                print(
-                    f"\n💥 Unexpected error evaluating {result.get('subset_id', 'unknown')}: {e}"
-                )
-                traceback.print_exc()
-                failed_count += 1
-                continue
+                    continue
 
         # Save results
         if evaluations:
@@ -400,6 +448,12 @@ def main():
         type=int,
         help="Maximum number of evaluations to process (for testing)",
     )
+    parser.add_argument(
+        "--max_workers",
+        type=int,
+        default=4,
+        help="Maximum number of worker threads for parallel evaluation (default: 4)",
+    )
 
     args = parser.parse_args()
 
@@ -409,12 +463,15 @@ def main():
     print(f"   Input file: {args.input_file}")
     print("   Judge model: gemini-2.0-flash")
     print(f"   Output directory: {args.output_dir}")
+    print(f"   Max workers: {args.max_workers}")
     if args.max_evaluations:
         print(f"   Max evaluations: {args.max_evaluations}")
     print()
 
     try:
-        evaluator = TeacherResponseEvaluator(output_dir=args.output_dir)
+        evaluator = TeacherResponseEvaluator(
+            output_dir=args.output_dir, max_workers=args.max_workers
+        )
         evaluations = evaluator.run(
             input_file=args.input_file, max_evaluations=args.max_evaluations
         )
