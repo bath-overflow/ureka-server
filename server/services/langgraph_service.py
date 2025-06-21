@@ -1,3 +1,6 @@
+import json
+import os
+import random
 import traceback
 from typing import Annotated, AsyncGenerator, Dict, List, Literal, Optional, TypedDict
 
@@ -16,6 +19,7 @@ from langgraph.prebuilt import InjectedState, ToolNode
 from server.repositories.vector_store import vector_store
 from server.services.llm import llm
 from server.services.prompt import PromptService
+from server.utils.config import CHAT_CRITIQUE_REVISE_ITERATIONS
 
 
 # --- State Definition ---
@@ -26,7 +30,7 @@ class State(TypedDict):
     collection_name: Optional[str]
 
 
-class LangGraphService:
+class ChatGraphService:
     def __init__(self):
         self.graph = self._build_graph()
         self.prompt_service = PromptService()
@@ -149,7 +153,7 @@ class LangGraphService:
             [self._create_tool_node().tools_by_name["retrieve"]]
         )
 
-        instruction = self.prompt_service.get_prompt("pre_retrieve_prompt.txt")
+        prompt = self.prompt_service.get_prompt("pre_retrieve_prompt.txt")
 
         history = ""
         for message in all_messages:
@@ -162,12 +166,12 @@ class LangGraphService:
             ):
                 history += f"[Teacher]: {message.content}\n"
 
-        full_prompt = f"{instruction}\n{history}\n"
+        prompt = prompt.format(dialogue_history=history)
 
         print(f"--- Pre-retrieve: Analyzing {len(all_messages)} messages. ---")
 
         # Invoke the LLM with the instruction and the full conversation history
-        response = llm_with_tools.invoke([HumanMessage(content=full_prompt)])
+        response = llm_with_tools.invoke([HumanMessage(content=prompt)])
 
         # The response is an AIMessage, which might contain tool calls
         # or the content "PASS".
@@ -224,10 +228,106 @@ class LangGraphService:
         print(f"--- Initial Answer Generated (for query: '{user_query}') ---")
         return {"initial_answer": answer}
 
+    def _critique_and_revise(
+        self,
+        teacher_response: str,
+        dialogue_history: str,
+        reference: str,
+        iteration: int = 1,
+    ) -> str:
+        """
+        Critique and revise a teacher response using Constitutional AI.
+
+        Args:
+            teacher_response: The teacher response to critique and revise
+            dialogue_history: The dialogue history context
+            reference: The reference materials context
+            iteration: The iteration number for logging purposes
+
+        Returns:
+            The revised teacher response, or original if revision fails
+        """
+        try:
+            # Load critique/revision configuration
+            prompt_dir = os.path.join(os.path.dirname(__file__), "../prompts")
+            critique_revise_path = os.path.join(prompt_dir, "critique_revise.json")
+            if not os.path.exists(critique_revise_path):
+                print(
+                    f"Error: critique_revise.json not found at {critique_revise_path}"
+                )
+                return teacher_response
+            with open(critique_revise_path, "r") as f:
+                critique_revise_configs = json.load(f)
+
+            # Randomly select a critique/revision configuration
+            config = random.choice(critique_revise_configs)
+            critique_request = config["critique_request"]
+            revision_request = config["revision_request"]
+        except Exception as e:
+            print(f"Error loading critique_revise.json (iteration {iteration}): {e}")
+            return teacher_response
+
+        # Generate critique
+        try:
+            critique_prompt_template = self.prompt_service.get_prompt(
+                "critique_prompt.txt"
+            )
+            critique_prompt = critique_prompt_template.format(
+                dialogue_history=dialogue_history,
+                reference=reference,
+                teacher_response=teacher_response,
+                critique_request=critique_request,
+            )
+
+            critique_response_obj = llm.invoke([HumanMessage(critique_prompt)])
+            critique = (
+                critique_response_obj.content
+                if isinstance(critique_response_obj.content, str)
+                else str(critique_response_obj.content)
+            )
+            print(
+                f"--- Generated critique for teacher response (iteration {iteration}) ---"
+            )
+            print(f"Critique: ###{critique}")
+        except Exception as e:
+            print(f"Error generating critique (iteration {iteration}): {e}")
+            return teacher_response
+
+        # Generate revision based on critique
+        try:
+            revision_prompt_template = self.prompt_service.get_prompt(
+                "revision_prompt.txt"
+            )
+            revision_prompt = revision_prompt_template.format(
+                dialogue_history=dialogue_history,
+                reference=reference,
+                teacher_response=teacher_response,
+                critique_request=critique_request,
+                critique=critique,
+                revision_request=revision_request,
+            )
+
+            llm_call_config = {"tags": [f"iteration_{iteration}"]}
+            revision_response_obj = llm.invoke(
+                [HumanMessage(revision_prompt)], config=llm_call_config
+            )
+            revised_response = (
+                revision_response_obj.content
+                if isinstance(revision_response_obj.content, str)
+                else str(revision_response_obj.content)
+            )
+            revised_response = revised_response.removeprefix("[Teacher]: ")
+            print(f"--- Generated revised response (it {iteration}) ---")
+            print(f"Revised Response: ###{revised_response}")
+            return revised_response
+        except Exception as e:
+            print(f"Error generating revision (it {iteration}): {e}")
+            return teacher_response
+
     def _generate_final_answer(self, state: State) -> Dict[str, List[AIMessage]]:
         """
         Generate the final response using teacher prompt, initial answer, and retrieval
-        results.
+        results. Self-critique and revise following Constitutional AI with multiple iterations.
         """
         print("--- Teacher: Generating Response with Context ---")
         user_query = state.get("user_query")
@@ -263,21 +363,40 @@ class LangGraphService:
             elif (
                 isinstance(message, AIMessage)
                 and not message.tool_calls
-                and not message.content.strip().lower() == "pass"
+                and (
+                    isinstance(message.content, str)
+                    and not message.content.strip().lower() == "pass"
+                )
             ):
                 dialogue_history += f"[Teacher]: {message.content}\n"
 
+        # Step 1: Generate initial teacher response
         instruction = self.prompt_service.get_prompt("teacher_prompt.txt")
-
         prompt = instruction.format(
             dialogue_history=dialogue_history,
             reference=reference,
             key_ideas=initial_answer,
         )
+        response_obj = llm.invoke([HumanMessage(prompt)])
+        current_response = (
+            response_obj.content
+            if isinstance(response_obj.content, str)
+            else str(response_obj.content)
+        )
+        print(f"Initial Response: ###{current_response}")
 
-        response = llm.invoke([HumanMessage(prompt)])
+        # Step 2: Apply multiple rounds of critique and revision
+        for i in range(CHAT_CRITIQUE_REVISE_ITERATIONS):
+            current_response = self._critique_and_revise(
+                teacher_response=current_response,
+                dialogue_history=dialogue_history,
+                reference=reference,
+                iteration=i + 1,
+            )
 
-        return {"messages": [response]}
+        # Create final AIMessage with the revised response
+        final_response = AIMessage(content=current_response)
+        return {"messages": [final_response]}
 
     @staticmethod
     def _route_after_query(state: State) -> Literal["tools", "generate_initial_answer"]:
@@ -336,8 +455,10 @@ class LangGraphService:
                 if current_node == "generate_final_answer" and isinstance(
                     chunk, AIMessage
                 ):
-                    # For token-by-token streaming, the content is the new token
-                    yield chunk.content
+                    for tag in metadata.get("tags", []):
+                        if tag == f"iteration_{CHAT_CRITIQUE_REVISE_ITERATIONS}":
+                            content = chunk.content.removeprefix("[Teacher]: ")
+                            yield content
 
         except Exception as e:
             error_msg = f"Error in stream_chat_response: {str(e)}"
@@ -347,7 +468,7 @@ class LangGraphService:
 
 
 # Create a singleton instance
-lang_graph_service = LangGraphService()
+chat_graph_service = ChatGraphService()
 
 
 async def stream_chat_response(
@@ -361,11 +482,11 @@ async def stream_chat_response(
     Yields:
         Tokens from the AI response as they're generated
     """
-    async for token in lang_graph_service.stream_chat_response(chat_id, user_message):
+    async for token in chat_graph_service.stream_chat_response(chat_id, user_message):
         yield token
 
 
-class SimpleChatGraphService(LangGraphService):
+class SimpleChatGraphService(ChatGraphService):
     """
     A simplified version of LangGraphService for basic chat functionality.
     This service does not include document retrieval or complex routing.

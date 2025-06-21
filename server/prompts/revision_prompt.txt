@@ -1,0 +1,20 @@
+Dialogue History: 
+{dialogue_history}
+
+Reference: 
+{reference}
+
+Teacher's Response: 
+[Teacher]: {teacher_response}
+
+Critique Request: 
+{critique_request}
+
+Critique: 
+{critique}
+
+Revision Request: 
+{revision_request}
+
+Revised Teacher's Response: 
+[Teacher]: 

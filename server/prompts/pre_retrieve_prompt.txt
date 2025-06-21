@@ -1,15 +1,12 @@
-Analyze the provided conversation history which culminates in the latest user question to determinei if retrieving external documents is necessary to provide a comprehensive answer. 
+You will be given a dialogue history between a student and a teacher. 
+Your goal is to determine if retrieving external documents is necessary for the teacher to give a more comprehensive answer. 
 
-Review the ENTIRE conversation history to understand the full context.
-Focus on the LATEST user question (the last message in the history).
-Decide if external documents need to be retrieved to answer this LATEST question. 
+1. Review the entire dialogue history to understand the context. 
+2. Focus on the last student utterance. 
+3. Decide if referring to external documents would lead to a better answer by the teacher. 
 
-Note that the external documents are provided by the user and are likely to contain relevant information. 
-If retrieval IS needed (e.g., the question is specific, requires recent information, or you want to be sure): 
-   - Generate a concise search query based on the latest user question and the conversation history.
-   - Make a tool call to `retrieve`.
-If retrieval IS NOT needed (e.g., the question is general): 
-   - Respond with the single word: PASS
-   - Do NOT add any other text or explanation if you output PASS.
+If retrieval is needed, generate one or more search queries and make a tool call to 'retrieve'. 
+If not, respond with a single word 'PASS'. 
 
-The conversation history is as follows:
+Dialogue History: 
+{dialogue_history}
