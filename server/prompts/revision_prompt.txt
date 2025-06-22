@@ -15,6 +15,7 @@ Critique:
 
 Revision Request: 
 {revision_request}
+Respond in the same language the student is using.
 
 Revised Teacher's Response: 
 [Teacher]: 
