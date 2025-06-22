@@ -20,31 +20,31 @@ from datetime import datetime
 from server.models.chat_model import ChatMessage, ChatHistory
 
 #테스트용 ChatHistory 생성
-test_chat_history = ChatHistory(
-    id="0f0f26c4-9787-4452-b3fb-886be6e97fd0",
-    messages=[
-        ChatMessage(
-            role="user",
-            message="TCP랑 UDP가 어떻게 달라요?",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="assistant",
-            message="흥미로운 질문이네요. TCP의 특징에 대해 알고 있나요?",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="user",
-            message="음... 제대로 도착하는 거요?",
-            created_at=datetime.utcnow().isoformat(),
-        ),
-        ChatMessage(
-            role="assistant",
-            message="맞아요. TCP는 데이터를 보낼 때마다, 제대로 도착했는지를 확인하고, 누락된 게 있으면 다시 보내는 방식을 씁니다. 그게 왜 필요할까요?",
-            created_at=datetime.utcnow().isoformat(),
-        )
-    ],
-)
+# test_chat_history = ChatHistory(
+#     id="0f0f26c4-9787-4452-b3fb-886be6e97fd0",
+#     messages=[
+#         ChatMessage(
+#             role="user",
+#             message="TCP랑 UDP가 어떻게 달라요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="assistant",
+#             message="흥미로운 질문이네요. TCP의 특징에 대해 알고 있나요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="user",
+#             message="음... 제대로 도착하는 거요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         ),
+#         ChatMessage(
+#             role="assistant",
+#             message="맞아요. TCP는 데이터를 보낼 때마다, 제대로 도착했는지를 확인하고, 누락된 게 있으면 다시 보내는 방식을 씁니다. 그게 왜 필요할까요?",
+#             created_at=datetime.utcnow().isoformat(),
+#         )
+#     ],
+# )
 
 # --- State Definition ---
 class State(TypedDict):
@@ -304,8 +304,8 @@ class HintService:
         """
         from server.routers.chat import chat_service
         
-        #chat_history = chat_service.get_history(chat_id)
-        chat_history = test_chat_history
+        chat_history = chat_service.get_history(chat_id)
+        #chat_history = test_chat_history
         
         if chat_history is None:
             return None, None
