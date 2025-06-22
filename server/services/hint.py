@@ -20,31 +20,31 @@ from datetime import datetime
 from server.models.chat_model import ChatMessage, ChatHistory
 
 #테스트용 ChatHistory 생성
-# test_chat_history = ChatHistory(
-#     id="0f0f26c4-9787-4452-b3fb-886be6e97fd0",
-#     messages=[
-#         ChatMessage(
-#             role="user",
-#             message="프롬프트 엔지니어링이 뭔가요?",
-#             created_at=datetime.utcnow().isoformat(),
-#         ),
-#         ChatMessage(
-#             role="assistant",
-#             message="프롬프트 엔지니어링은 LLM이 원하는 출력을 내도록 질문이나 명령을 설계하는 방법이에요. 왜 이런 기술이 필요한지 생각해본 적 있나요?",
-#             created_at=datetime.utcnow().isoformat(),
-#         ),
-#         ChatMessage(
-#             role="user",
-#             message="LLM이 가끔 엉뚱한 답을 줄 때가 있어서 그런 것 같아요.",
-#             created_at=datetime.utcnow().isoformat(),
-#         ),
-#         ChatMessage(
-#             role="assistant",
-#             message="맞아요. 그럼 어떤 요소들이 잘 설계된 프롬프트를 만들게 해줄까요?",
-#             created_at=datetime.utcnow().isoformat(),
-#         )
-#     ],
-# )
+test_chat_history = ChatHistory(
+    id="0f0f26c4-9787-4452-b3fb-886be6e97fd0",
+    messages=[
+        ChatMessage(
+            role="user",
+            message="TCP랑 UDP가 어떻게 달라요?",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="assistant",
+            message="흥미로운 질문이네요. TCP의 특징에 대해 알고 있나요?",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="user",
+            message="음... 제대로 도착하는 거요?",
+            created_at=datetime.utcnow().isoformat(),
+        ),
+        ChatMessage(
+            role="assistant",
+            message="맞아요. TCP는 데이터를 보낼 때마다, 제대로 도착했는지를 확인하고, 누락된 게 있으면 다시 보내는 방식을 씁니다. 그게 왜 필요할까요?",
+            created_at=datetime.utcnow().isoformat(),
+        )
+    ],
+)
 
 # --- State Definition ---
 class State(TypedDict):
@@ -119,23 +119,6 @@ class HintService:
             return content, retrieved_docs
 
         return ToolNode([retrieve])
-
-    # def _load_chat_history(self, state: State) -> Dict[str, List[AnyMessage]]:
-    #     """Load chat history from ChatHistory at the start of the graph."""
-    #     print("--- Loading chat history ---")
-    #     collection_name = state.get("collection_name")
-    #     if not collection_name:
-    #         print("Error: No collection name found in state for load_chat_history")
-    #         raise ValueError("Collection name not found in state")
-
-    #     # Get previous question from llm
-    #     messages, prev_question = self._get_messages_and_last_ai_question(collection_name)
-
-    #     print(f"--- Loaded {len(messages)} messages from chat history ---")
-    #     return {
-    #         "prev_question": prev_question,
-    #         "messages": messages,
-    #     }
 
     def _pre_retrieve(self, state: State) -> Dict[str, List[AnyMessage]]:
         """
@@ -253,18 +236,16 @@ class HintService:
                 and not message.content.strip().lower() == "pass"
             ):
                 history += f"[Teacher]: {message.content}\n"
-
+        history += "[Student]: I have no idea.\n"+"[Teacher]: "
+        
         instruction = self.prompt_service.get_prompt("hint_generate_prompt.txt")
 
-        full_prompt = "\n".join(
-            [
-                instruction,
-                f"<answer>{initial_answer}</answer>",
-                docs_content,
-
-            ]
+        full_prompt = instruction.format(
+            dialogue_history=history,
+            reference=docs_content,
+            key_ideas=initial_answer,
         )
-        #history + "[Student]: I have no idea.\n"+"[Teacher]: ",
+        
         print(f"FULL PROMPT:\n{full_prompt}")
         
         response = llm.invoke([HumanMessage(full_prompt)])
@@ -323,8 +304,8 @@ class HintService:
         """
         from server.routers.chat import chat_service
         
-        chat_history = chat_service.get_history(chat_id)
-        #chat_history = test_chat_history
+        #chat_history = chat_service.get_history(chat_id)
+        chat_history = test_chat_history
         
         if chat_history is None:
             return None, None
