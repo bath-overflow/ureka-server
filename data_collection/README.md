@@ -1,77 +1,175 @@
-# 데이터 생성, 수집 파이프라인
+# Dialogue data 생성 ~ Evaluation
 
-Simulated student - teacher간 대화를 생성합니다. 
+## 목적
 
-Simulated student는 컴공 전공의 8가지 중 한 가지 페르소나를 가지도록 초기화됩니다. 
+소크라테스식 질문을 하도록 프롬프팅한 LLM이랑 우리 방법이 다른 것이 무엇이고, 정말 우리 방법이 더 좋은가?를 정량적으로 보이기 위함입니다. 
 
-Teacher로는 다음 중 하나를 고를 수 있습니다. 
-1. Ours
-2. Simplified Instruction으로 프롬프팅된 Gemini
+이상적으로는 각 방법을 이용해 공부했을 때의 학습효과를 측정해야 합니다. 시험을 볼 수도 있고, 배운 내용을 글로 서술해보라고 할 수도 있죠. 하지만 신뢰할만한 방법으로 이를 측정하기 위해서는 여러 사람을 데리고 대규모 연구를 진행해야 합니다. 
 
-# 목적
+이러한 어려움이 있기 때문에 우리는 같은 대화 흐름에서 Ureka, 그리고 Gemini가 선생님 응답을 하라고 한 뒤, 네 가지 측면에서 답변의 질을 측정하고 비교하도록 했습니다.
 
-Gemini vs. Ours를 정량적으로 평가하기 위함입니다. 
+## 평가 진행 방식
 
-## 정량평가 구상안
+### 개요
+1. Simulated student - teacher간 t-turn 대화 데이터를 생성합니다. 
+2. N개의 t-turn 대화를 생성한 다음, 
 
-1. Gemini와 랜덤한 페르소나를 가지는 Student간에 총 8-turn의 대화를 하도록 시켜 데이터셋을 얻습니다. \
-여기서 Gemini에 쓰이는 간단한 프롬프트는 아래와 같은 구조를 가집니다. 
+    학생 발화가 마지막이 되도록 랜덤하게 대화를 잘라 M개의 대화 subset을 얻습니다. 
+    
+3. 각 대화 subset에 대해 Teacher LLM(Gemini)와 Ureka에게 각각 선생님 답을 생성하도록 합니다. 
+4. 두 선생님 답을 비교해 누가 더 나은 답을 했는지 결정하게 합니다.
+
+### Student LLM
+데이터 생성 과정에서 학생이 “진짜 학생”같이 행동하는 것은 중요합니다. 이를 위해 학생 역할 LLM에게 페르소나를 정의한 다음, 그 페르소나의 학생을 흉내내게 했습니다. 
+
+페르소나를 구성하기 위해 3가지 차원을 정의했습니다. 
+
+1. **Goal Commitment**: Low/High dedication to learning goals
+2. **Motivation**: Low/High learning motivation  
+3. **Self-Efficacy**: Low/High confidence in abilities
+
+각 차원의 높고 낮음, 그리고 4학년 중 하나의 학년을 결정함에 따라 32종의 다양한 페르소나를 가진 학생을 정의할 수 있습니다. 
+
+학생은 언제나 올바른 답만 하지 않습니다. 오답을 포함해 다양한 종류의 답을 할 수 있도록 답의 종류를 나열해 프롬프트에 포함했습니다. 
+
+사용한 프롬프트는 다음과 같습니다. 
+
 ```
-Simplified Instruction
-History
-```
-Simplified Instruction은 ureka에서 쓰는 instruction과 비슷하지만, 조금 더 간소화된 버전입니다. \
-Student의 초기 질문으로는 컴공의 다양한 과목들에서 나올 수 있는 질문들로, 미리 지정되어 있습니다. (`data_collection_student.py` 상단)
+You are a {persona}. Based on the previous conversation, generate one of the following:
+1. A follow-up question to the teacher
+2. A clarification question
+3. A new question based on the topic discussed
+4. An irrelevant question
+5. A correct answer to the teacher's last question
+6. A wrong answer to the teacher's last question
+Simply generate your response without your selection number.
 
-이렇게 만든 데이터셋을 다음과 같이 표현하겠습니다.
-$$\{(S_1^i, T_1^i, S_2^i, T_2^i, ..., S_7^i, T_7^i)\}$$
-여기서 $S_j^i$는 대화 i에서 학생의 j번째 발화를 말합니다. T는 선생님 발화를 말합니다. 
+Previous conversation:
+{history_str}
+You: 
+```
 
-2. 데이터셋에서 랜덤하게 Student 발화까지 포함하게 자른 뒤, Ours, 그리고 Gemini에게 Teacher 응답을 완성해보라고 시킵니다. 예를 들어, 랜덤하게 자른 결과 $(S_1, T_1, S_2, T_2, S_3)$라는 샘플이 나왔다고 합시다. 우리는 이 샘플을 대화 히스토리로 써서 Gemini, ureka에게 응답을 생성하라고 시킵니다. \
-Gemini는 이렇게 프롬프팅을 합니다. 
-```
-Simplified Instruction
-History
-```
-Ureka는 이런 식으로 프롬프팅을 하죠. 
-```
-Instruction
-Examples * N
-  History
-  Answer
-  Reference
-History
-Answer
-Reference
-```
-Gemini의 응답을 $\hat{T_{G}}$, 우리 응답을 $\hat{T_{U}}$라고 합시다. \
-이런 방식으로 $\{(Input^i, \hat{T_{G}}^i, \hat{T_{U}}^i)\}_i$ 형태의 데이터셋을 모읍니다. \
-여기서 $Input^i$는 랜덤하게 잘라서 얻은 대화 히스토리를 말합니다. 
+### Teacher LLM
+비교군 선생님, 그리고 대화 데이터 생성 과정에서는 ‘간단하게 프롬프팅된’ Gemini를 사용했습니다. 사용한 프롬프트 형식은 다음과 같습니다. 
 
-3. LLM에게 어떤 쪽이 더 나은 선생님 응답인지 평가하게 합니다. 
-평가기준은 1) 의도파악, 2) 설명능력, 3) 질문능력, 4) 읽기 쉬움입니다. 
 ```
-1. Read the following dialogue where a student and teacher engages in a pedagogical conversation. 
-2. For the students' last round of response, rate which teacher's instruction is better from four aspects:
-• Understanding: Assess whether the teacher correctly understands the student's intention.
-• Explanation: Whether the teacher effectively solves the students' problem and provides
-appropriate and actionable guidance.
-• Language: Evaluate whether the teacher's instruction conforms to the demands of Socratic
-teaching, including that it is presented as a question and does not give a direct answer.
-• Readability: Assess whether the teacher's instruction is easy to read and not too blunt.
+You will be given a dialogue history between a user and a teacher. 
+You are the teacher in the dialogue who follows the Socratic style of teaching. 
 
-{dialogue history}
+Dialogue History: 
 
-[Teacher A]: {Gemini 또는 ours 응답}
-[Teacher B]: {나머지 하나의 응답}
-
-Which is better?
-(a) Teacher A
-(b) Teacher B
-(c) Equivalent
+{dialogue_history}
+[Teacher]: 
 ```
+
+### 평가 방법 상세
+
+1. Gemini(Teacher LLM)과 랜덤한 페르소나를 가지는 Student(Student LLM)간에 총 4-turn의 대화를 하도록 시켜 데이터셋을 얻습니다. (1단계)
+    
+    대화에서 학생은 첫 질문을 던져야 합니다. 첫 질문으로는 컴퓨터공학과 학생이 4년 과정 동안 배우는 과목에서 나올 수 있는 중간 이상 난이도의, 구체적인 질문을 하도록 했습니다. 이 질문 중 한 가지를 랜덤하게 골라 첫 질문으로 사용합니다. 
+    
+    사용된 질문은 다음과 같습니다. 
+    
+    ```
+    # Algorithms & Data Structures
+    "Why does quicksort have poor worst-case performance, and how do randomized 
+    pivots address this issue in practice?",
+    "In what scenarios is an AVL tree preferred over a Red-Black tree, and what 
+    are the practical trade-offs between the two?",
+    "How does the amortized analysis of a dynamic array's append operation 
+    justify its average-case O(1) insertion time?",
+    "Why can't Dijkstra's algorithm handle negative-weight edges, and how does 
+    the Bellman-Ford algorithm overcome this limitation?",
+    "When using a hash table, how does the choice between open addressing and 
+    separate chaining affect performance and memory usage under high load 
+    factors?",
+    "Why is the master theorem inapplicable to certain recurrence relations, 
+    such as T(n) = 2T(√n) + log n?",
+    # Operating Systems
+    "How does the copy-on-write mechanism improve the efficiency of fork() in 
+    Unix-based systems?",
+    "Why are page replacement algorithms like LRU and CLOCK not perfectly 
+    accurate in predicting future accesses, and what are their practical 
+    limitations?",
+    "Explain why spinlocks can degrade system performance under high contention 
+    in a multi-core environment.",
+    "In what situations is a semaphore preferred over a mutex for inter-process 
+    synchronization?",
+    'How does the Linux Completely Fair Scheduler approximate "fairness," and 
+    what are the trade-offs compared to a strict round-robin scheduler?',
+    "Why does increasing the page size in virtual memory lead to higher 
+    internal fragmentation, and how does it impact TLB effectiveness?",
+    
+    # Machine Learning
+    "Why does regularization (like L2 or dropout) sometimes fail to prevent 
+    overfitting in deep neural networks, despite theoretical guarantees?",
+    "How do exploding and vanishing gradients arise in RNNs, and why are gating 
+    mechanisms like LSTM and GRU effective?",
+    "Why is the area under the ROC curve (AUC) not always a reliable metric for 
+    imbalanced datasets?",
+    "What are the theoretical and practical reasons behind the failure of 
+    k-means to cluster non-convex data?",
+    ```
+    
+    이렇게 만든 데이터셋을 $\{(S_1^i, T_1^i, …, S_t^i, T_t^i)\}_N$로 표현하겠습니다. 
+    
+2. 데이터셋에서 랜덤하게 Student 발화까지 포함하게 자른 뒤, Ureka, 그리고 Teacher LLM에게 Teacher 응답을 완성해보라고 시킵니다. 예를 들어, 랜덤하게 자른 결과 $\text{Input} = (S_1,T_1,S_2,T_2,S_3)$라는 샘플이 나왔다고 합시다. 우리는 이 샘플을 대화 히스토리로 써서 Teacher LLM, Ureka에게 응답을 생성하라고 시킵니다. (2~3 단계)
+    
+    Teacher LLM (Gemini) 응답을 $\hat{T_G}$, Ureka 응답을 $\hat{T_U}$이라 합시다. 
+    
+    이런 방식으로  $\{(\text{Input}_i, \hat{T_G}_i, \hat{T_U}_i)\}_M$ 데이터셋을 모읍니다. 
+    
+3. Judge LLM에게 어떤 쪽이 더 나은 선생님 응답인지 평가하게 합니다. 평가기준은 1) 의도파악, 2) 설명능력, 3) 질문능력, 4) 읽기 쉬움입니다. (4단계)
+    
+    ```
+    1. Read the following dialogue where a student and teacher engages in a pedagogical conversation. 
+    2. For the students' last round of response, rate which teacher's instruction is better from four aspects:
+    • Understanding: Assess whether the teacher correctly understands the student's intention.
+    • Explanation: Whether the teacher effectively solves the students' problem and provides appropriate and actionable guidance.
+    • Language: Evaluate whether the teacher's instruction conforms to the demands of Socratic teaching, including that it is presented as a question and does not give a direct answer.
+    • Readability: Assess whether the teacher's instruction is easy to read and not too blunt.
+    
+    Follow the steps to evaluate. 
+    1. Provide a detailed comparison of the two responses for each of the four aspects. 
+    2. Provide an overall evaluation considering all four aspects. 
+    3. Give your final decision after "###"
+    
+    Dialogue History:
+    {dialogue_history}
+    
+    Teacher Responses to Evaluate:
+    [Teacher A]: {teacher_a_response}
+    [Teacher B]: {teacher_b_response}
+    
+    Which is better?
+    (a) Teacher A
+    (b) Teacher B
+    (c) Equivalent
+    
+    Your Evaluation: 
+    ```
+    
+    Robust한 평가를 위해 이 단계를 3번 반복해 다수결에 따라 승-패-무승부를 결정합니다.
+
 결과를 정리해 우리 방법의 효과성을 정량적으로 입증합니다. \
 적힌 기준들은 충분히 바꿀 수 있습니다. 또한 각각의 기준(의도파악, 설명능력, ...)에 대해 누가 더 잘했느냐를 묻는 방식으로 바꿀 수도 있습니다. 
+
+### 평가 결과
+
+100개의 dialogue data를 모아 200개의 dialogue subset을 구성, 평가를 진행한 결과는 다음과 같습니다. 
+
+|  | 승리 횟수 | 비율 |
+| --- | --- | --- |
+| Ureka | 123 | 61.5% |
+| Gemini | 71 | 35.5% |
+| 무승부 | 6 | 3% |
+
+판결 신뢰도
+|  | 횟수 | 비율 |
+| --- | --- | --- |
+| 만장일치 | 96 | 48% |
+| 다수일치 (두 번 일치) | 98 | 49% |
+| 서로 불일치 | 6 | 3% |
 
 ### 한계
 저희가 정말 보여야하는 것은 학생의 입장에서, 문제해결력이 증대되었느냐, 비판적 사고를 더하게 되었느냐입니다. \
@@ -79,103 +177,37 @@ Which is better?
 혹시 **'학생의 입장에서' 대화를 평가하는 방법에 대해 아이디어가 있으신 분은 제안해주시면 감사하겠습니다.** 
 
 데이터셋을 모을 때 Simple Instruction을 쓰는 이유는 우리 instruction을 쓰면 우리 방법에 치우친 대화가 생성되어 평가가 공정해지지 못할 것이기 때문입니다. \
-이 평가 방법은 SocraticLM 논문에서 Overall 점수를 구할 때 사용한 방식과 99% 같습니다. \
+이 평가 방법은 SocraticLM 논문에서 Overall 점수를 구할 때 사용한 방식에서 많은 영감을 얻었습니다. \
 다만 논문에서는 3단계를 실제 사람 10명이 수행하지만 저희는 LLM이 하도록 했습니다. 
 
-## 구현사항
+## 각 스크립트 역할 소개
 
-선생님과 학생간 대화를 대량으로 수집하는 파이프라인이 구현되어 있습니다. 동작은 간단합니다. 
-1. 학생 페르소나를 샘플링합니다. 
-2. 새 프로젝트를 만듭니다. 
-3. 초기질문 하나를 샘플링합니다. 
-4. 초기질문을 선생님에게 던지는 것을 시작으로 선생님, 학생이 대화합니다. 
+`student_personas.py`: Student의 다양한 페르소나 정의
 
-구현되어 있지 않은 것은 다음과 같습니다. 
-1. 프로젝트에 문서 업로드 <- 프로젝트마다 문서를 업로드하는건 비효율적입니다. 대신에 하나의 프로젝트를 만들고, 그 프로젝트에 문서를 대량으로 업로드한 다음, langgraph_service.py의 tool node에서 collection_id를 이 프로젝트 ID로 고정시키는 방식으로 하는게 좋을 것 같습니다. 
-2. 구상안의 2단계
-3. 구상안의 3단계
+`data_collection_student.py`: 임의의 페르소나 가지는 Student LLM 생성, 대화의 초기질문 정의. Data collection 로직
 
-특징
-- **Diverse Student Personas**: University CS students with varying goal commitment, motivation, and self-efficacy
-- **CS-Focused Topics**: Conversations cover algorithms, programming, data structures, AI/ML, and more
-- **Concurrent Collection**: Parallel sessions for faster data generation
-- **Comprehensive Logging**: JSON logs with conversation history and metadata
+`batch_data_collection.py`:  Student LLM과 Teacher LLM이 대화하도록 하여 dialogue data를 생성 (1단계)
 
-## Quick Start
+`create_subsets.py`: batch_data_collection으로 얻어진 대화 데이터를 잘라 subset으로 만듦 (2단계)
+
+`collect_endpoint_response.py`: 대화 subset에 대하여 Ureka, Teacher LLM이 각자 응답 생성하도록 하는 파이프라인 (3단계)
+
+`evaluate_teacher_responses.py`: Ureka, Teacher LLM이 각자 생성한 응답을 비교하고 평가하는 파이프라인 (4단계)
+
+`run_robust_evaluation.py`: `evaluate_teacher_response`가 하는 일을 3번 반복하고, 그 결과를 정리
+
+## 사용법 예시
 
 1. **Ureka 서버 실행**
 
 2. **Run data collection:**
-   ```bash
-   # Simple collection (5 sessions, 3 turns each)
-   python data_collection_student.py
-   
-   # Batch collection with concurrency
-   python batch_data_collection.py --sessions 10 --concurrent 3
-   
-   # Using the runner script
-   ./run_data_collection.sh 20 3 5  # 20 sessions, 3 turns, 5 concurrent
-   ```
 
-## Usage Options
-
-### Individual Session
 ```bash
-python data_collection_student.py
-```
+python batch_data_collection.py --turns 4 --output data_collection_logs/dialogues
 
-### Batch Collection
-```bash
-python batch_data_collection.py [OPTIONS]
+python create_subsets.py --num_subsets 200 --input_dir data_collection_logs/dialogues --output_dir data_collection_logs/subsets
 
-Options:
-  --sessions N      Number of sessions (default: 5)
-  --turns N         Student utterances per session (default: 3)
-  --concurrent N    Max concurrent sessions (default: 3)
-  --delay N         Delay between sessions in seconds (default: 1)
-  --output DIR      Output directory (default: data_collection_logs)
-  --endpoint END    'simple-chat' for a simple prompted LLM, 'chat' for UREKA
-```
+python collect_endpoint_response.py --input_dir data_collection_logs/subsets --output_dir data_collection_logs/responses
 
-### Examples
-```bash
-# Quick test with 3 sessions
-python batch_data_collection.py --sessions 3 --turns 2
-
-# High-throughput collection
-python batch_data_collection.py --sessions 50 --concurrent 5 --turns 4
-```
-
-## Student Personas
-
-The system generates diverse CS student personas with:
-
-- **Goal Commitment**: Low/High dedication to learning goals
-- **Motivation**: Low/High learning motivation  
-- **Self-Efficacy**: Low/High confidence in abilities
-
-Topics include: Algorithms, Data Structures, Programming Languages, AI/ML, Software Engineering, Computer Systems, Web Development, and more.
-
-## Output
-
-Data is saved to `data_collection_logs/`:
-- `session_*.json`: Individual conversation logs
-- `batch_summary_*.json`: Batch statistics and metadata
-
-### Log Structure
-```json
-{
-  "session_id": "session_20231201_143022",
-  "project_id": "abc123",
-  "student_persona": "motivated CS junior studying algorithms...",
-  "student_traits": {
-    "goal_commitment": "High",
-    "motivation": "Intrinsic", 
-    "self_efficacy": "Medium"
-  },
-  "messages": [...],
-  "total_messages": 6,
-  "start_time": "2023-12-01T14:30:22",
-  "end_time": "2023-12-01T14:31:45"
-}
+python run_robust_evalaution.py --input_file data_collection_logs/responses/endpoint_responses_20250623_161358.json --output_dir data_collection_logs/evaluations
 ```

@@ -1,0 +1,25 @@
+{
+  "subset_id": "40e18c41",
+  "original_session_id": "20250620_152908 8fa6ae",
+  "subset_description": "u1",
+  "subset_length": 1,
+  "created_at": "2025-06-20T16:12:01.234548",
+  "messages": [
+    {
+      "role": "user",
+      "message": "Why does quicksort have poor worst-case performance, and how do randomized pivots address this issue in practice?",
+      "timestamp": "2025-06-20T15:29:09.789340"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "naturally gifted CS senior who enjoys programming but hasn't committed to specific career plans",
+    "project_id": "61a6cb34-a773-4b2f-9f00-24e6998ef219",
+    "student_traits": {
+      "goal_commitment": "low",
+      "motivation": "high",
+      "self_efficacy": "high"
+    },
+    "batch_session_number": 15,
+    "batch_id": "batch_20250620_152922"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "subset_id": "2d8a7a3a",
+  "original_session_id": "20250620_153127 f0d4ff",
+  "subset_description": "u1",
+  "subset_length": 1,
+  "created_at": "2025-06-20T16:12:01.234342",
+  "messages": [
+    {
+      "role": "user",
+      "message": "What are the theoretical and practical reasons behind the failure of k-means to cluster non-convex data?",
+      "timestamp": "2025-06-20T15:31:29.607847"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "CS junior who wants to succeed but feels overwhelmed and lacks confidence",
+    "project_id": "8e354fa4-4392-4594-bfd6-1b3af8f6aa78",
+    "student_traits": {
+      "goal_commitment": "high",
+      "motivation": "low",
+      "self_efficacy": "low"
+    },
+    "batch_session_number": 55,
+    "batch_id": "batch_20250620_153144"
+  }
+}

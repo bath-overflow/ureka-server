@@ -1,0 +1,45 @@
+{
+  "subset_id": "5f240eae",
+  "original_session_id": "20250620_153146 f0eb5b",
+  "subset_description": "u1-a1-u2-a2-u3",
+  "subset_length": 5,
+  "created_at": "2025-06-20T16:12:01.234462",
+  "messages": [
+    {
+      "role": "user",
+      "message": "Why does quicksort have poor worst-case performance, and how do randomized pivots address this issue in practice?",
+      "timestamp": "2025-06-20T15:31:50.649182"
+    },
+    {
+      "role": "assistant",
+      "message": "Okay, let's break down quicksort's performance. First, can you remind me what the worst-case scenario *is* for quicksort, in terms of the input data? What kind of input would cause quicksort to perform at its absolute worst?",
+      "timestamp": "2025-06-20T15:31:50.649189"
+    },
+    {
+      "role": "user",
+      "message": "A sorted array.",
+      "timestamp": "2025-06-20T15:31:54.653642"
+    },
+    {
+      "role": "assistant",
+      "message": "Precisely! And *why* does a sorted (or nearly sorted) array lead to quicksort's worst-case performance? Think about how the partitioning step works in relation to the pivot. What happens when the pivot is consistently the smallest or largest element?",
+      "timestamp": "2025-06-20T15:31:54.653645"
+    },
+    {
+      "role": "user",
+      "message": "Because then one partition is always empty.",
+      "timestamp": "2025-06-20T15:31:58.544150"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "technically skilled CS junior who can handle coursework but lacks engagement",
+    "project_id": "a8de1bcf-9f75-4d6f-bcca-4ad718c1b7e8",
+    "student_traits": {
+      "goal_commitment": "low",
+      "motivation": "low",
+      "self_efficacy": "high"
+    },
+    "batch_session_number": 60,
+    "batch_id": "batch_20250620_153202"
+  }
+}

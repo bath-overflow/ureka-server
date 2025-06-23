@@ -1,0 +1,25 @@
+{
+  "subset_id": "1b92a29b",
+  "original_session_id": "20250620_152928 82d3ea",
+  "subset_description": "u1",
+  "subset_length": 1,
+  "created_at": "2025-06-20T16:12:01.234457",
+  "messages": [
+    {
+      "role": "user",
+      "message": "How does the copy-on-write mechanism improve the efficiency of fork() in Unix-based systems?",
+      "timestamp": "2025-06-20T15:29:29.768101"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "talented CS junior who finds programming easy but questions their passion for the field",
+    "project_id": "83307359-8475-425a-9add-1e78ea4bbd88",
+    "student_traits": {
+      "goal_commitment": "high",
+      "motivation": "low",
+      "self_efficacy": "high"
+    },
+    "batch_session_number": 19,
+    "batch_id": "batch_20250620_152941"
+  }
+}

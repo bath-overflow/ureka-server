@@ -1,0 +1,25 @@
+{
+  "subset_id": "c8b608b4",
+  "original_session_id": "20250620_153110 72ebe0",
+  "subset_description": "u1",
+  "subset_length": 1,
+  "created_at": "2025-06-20T16:12:01.234349",
+  "messages": [
+    {
+      "role": "user",
+      "message": "Explain why spinlocks can degrade system performance under high contention in a multi-core environment.",
+      "timestamp": "2025-06-20T15:31:12.757743"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "determined CS freshman with goals but struggles with both motivation and self-doubt",
+    "project_id": "b75facec-d0cb-4ade-a564-4b999b586bbc",
+    "student_traits": {
+      "goal_commitment": "high",
+      "motivation": "low",
+      "self_efficacy": "low"
+    },
+    "batch_session_number": 48,
+    "batch_id": "batch_20250620_153126"
+  }
+}

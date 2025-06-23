@@ -1,0 +1,25 @@
+{
+  "subset_id": "6f8f309e",
+  "original_session_id": "20250620_153300 8dbfb6",
+  "subset_description": "u1",
+  "subset_length": 1,
+  "created_at": "2025-06-20T16:12:01.234264",
+  "messages": [
+    {
+      "role": "user",
+      "message": "In what scenarios is an AVL tree preferred over a Red-Black tree, and what are the practical trade-offs between the two?",
+      "timestamp": "2025-06-20T15:33:02.759140"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "skilled CS senior who is technically competent but feels burned out",
+    "project_id": "594b8ed7-e660-43b9-a6cd-97f316ce6641",
+    "student_traits": {
+      "goal_commitment": "high",
+      "motivation": "low",
+      "self_efficacy": "high"
+    },
+    "batch_session_number": 81,
+    "batch_id": "batch_20250620_153315"
+  }
+}

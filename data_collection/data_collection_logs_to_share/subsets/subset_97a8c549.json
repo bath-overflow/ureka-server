@@ -1,0 +1,25 @@
+{
+  "subset_id": "97a8c549",
+  "original_session_id": "20250620_153351 24f412",
+  "subset_description": "u1",
+  "subset_length": 1,
+  "created_at": "2025-06-20T16:12:01.234481",
+  "messages": [
+    {
+      "role": "user",
+      "message": "In what situations is a semaphore preferred over a mutex for inter-process synchronization?",
+      "timestamp": "2025-06-20T15:33:53.318178"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "hardworking CS senior who is passionate about programming but often doubts their abilities",
+    "project_id": "f0ad181b-01bb-40cf-930c-c20fff6bd4c9",
+    "student_traits": {
+      "goal_commitment": "high",
+      "motivation": "high",
+      "self_efficacy": "low"
+    },
+    "batch_session_number": 96,
+    "batch_id": "batch_20250620_153405"
+  }
+}

@@ -1,0 +1,2539 @@
+{
+  "summary": {
+    "evaluation_completed": "2025-06-22T03:20:43.650397",
+    "num_evaluation_runs": 3,
+    "evaluation_files": [
+      "data_collection_logs/evaluations/judge_evaluations_20250622_021905.json",
+      "data_collection_logs/evaluations/judge_evaluations_20250622_022917.json",
+      "data_collection_logs/evaluations/judge_evaluations_20250622_022933.json"
+    ],
+    "total_subsets": 200,
+    "successful_evaluations": 194,
+    "final_verdict_distribution": {
+      "chat": 123,
+      "simple-chat": 71,
+      "tie": 6
+    },
+    "confidence_distribution": {
+      "unanimous": 96,
+      "majority": 98,
+      "no_consensus": 6
+    },
+    "ours_win_rate": 0.634020618556701,
+    "baseline_win_rate": 0.36597938144329895,
+    "tie_rate": 0.03,
+    "unanimous_agreement_rate": 0.48
+  },
+  "aggregated_results": {
+    "97a8c549": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "6cf3043c": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "51161dda": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "d70a31ca": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "759e697d": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "2c7f158a": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "251102f9": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "acd0f35f": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "2ccd3411": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "5f240eae": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "aafe497d": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "bed6811b": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "8cdf993b": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "1383a828": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "917c8637": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "65f31c7f": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "c170f2fc": {
+      "verdicts": [
+        "chat",
+        "unclear",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "unclear": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "ed390c4e": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "44657f51": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "8ab0ab96": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "f7e60929": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "equivalent"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "be8caa40": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "b7662a17": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "equivalent"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "b2a0f8a6": {
+      "verdicts": [
+        "chat",
+        "equivalent",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "226ba367": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "2aec37bf": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "ba174f8b": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "26c8290f": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "de604822": {
+      "verdicts": [
+        "simple-chat",
+        "equivalent",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "equivalent": 1,
+        "chat": 1
+      },
+      "final_verdict": "tie",
+      "confidence": "no_consensus"
+    },
+    "fc22c6c7": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "bc2e0e5d": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "049e48a1": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "1610ce3b": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "ddbc341c": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "2d736b31": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "fd5e8e09": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "e059fbb7": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "36e16206": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "dcc9246f": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "a51c2742": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "d706d54d": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "7b743ab2": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "c29dbc49": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "1c572fb1": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "c8b608b4": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "unclear"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "unclear": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "273f4214": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "fbb10d0b": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "a1a4ba03": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "9cadb5f9": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "58f012ac": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "11ea7163": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "b06b9c75": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "19bca968": {
+      "verdicts": [
+        "unclear",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "unclear": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "fa25e510": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "d99ff087": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "11ca43c0": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "870f5292": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "139c7696": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "e7781499": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "8433aa71": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "78321fe4": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "2a1a6543": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "c98f156b": {
+      "verdicts": [
+        "simple-chat",
+        "unclear",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "unclear": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "a131d44e": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "eedf2368": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "cddbb63b": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "4612c69e": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "6b9223fb": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "417aa916": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "4e1efc95": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "ecd110ad": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "56cbefce": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "ebbd54f8": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "5ba5ae23": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "d76621c1": {
+      "verdicts": [
+        "equivalent",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "equivalent": 1,
+        "chat": 1,
+        "simple-chat": 1
+      },
+      "final_verdict": "tie",
+      "confidence": "no_consensus"
+    },
+    "e8c5c719": {
+      "verdicts": [
+        "unclear",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "unclear": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "9c9a2659": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "1eabdc5b": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "2d6f1623": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "7527a29e": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "45442064": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "c4036d43": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "6f26f1ca": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "13305c89": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "8242c7ec": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "bab190aa": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "bdf4d4a7": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "a4ea6b00": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "cbe79ff2": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "f13d5583": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "8a3d7602": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "92fb7324": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "e86bdff7": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "96f1dd15": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "40e18c41": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "7d5fe90a": {
+      "verdicts": [
+        "chat",
+        "equivalent",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "29c503a2": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "c4d48f77": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "e4578275": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "5613f1c4": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "331b4d1c": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "a751a8da": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "48f4ccaa": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "6f49c67c": {
+      "verdicts": [
+        "chat",
+        "equivalent",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "6591a735": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "b755361c": {
+      "verdicts": [
+        "unclear",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "unclear": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "d920bb04": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "5c566a0f": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "90daba21": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "c39a6256": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "equivalent"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 1,
+        "equivalent": 1
+      },
+      "final_verdict": "tie",
+      "confidence": "no_consensus"
+    },
+    "0e3b2ead": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "96362839": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "fdd10dbd": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "9ca8a10b": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "b652c04d": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "4f4dc470": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "2121ec41": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "8b4f8ba1": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "equivalent"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "dfccceed": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "a4b380e5": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "b7fb7fa4": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "42dbf335": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "ed12b360": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "b96663d5": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "4c30dc46": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "00a4a6bb": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "40736f20": {
+      "verdicts": [
+        "equivalent",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "equivalent": 1,
+        "chat": 1,
+        "simple-chat": 1
+      },
+      "final_verdict": "tie",
+      "confidence": "no_consensus"
+    },
+    "c59f642e": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "7a8fea18": {
+      "verdicts": [
+        "unclear",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "unclear": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "fd659529": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "6755502f": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "717b2efb": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "af1bd90d": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "7dd3766b": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "5161a18a": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "cbdc5495": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "81530203": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "12222fbd": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "1ce5ca2c": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "2d8a7a3a": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "ba4f8a73": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "27c6de1d": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "f1c079f8": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "f55c8831": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "3ad4ab2d": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "a289fd28": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "e2bfb563": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "8b903dc1": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "unclear"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 1,
+        "unclear": 1
+      },
+      "final_verdict": "tie",
+      "confidence": "no_consensus"
+    },
+    "08f205bf": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "52ea9fb6": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "d7e08fed": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "8afb3f12": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "4cbf2500": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "equivalent"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "eafbb032": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "2808f07b": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "a9bd4f2a": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "8284c543": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "f8f07229": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "50764fb8": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "2f5eb6a9": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "9bb7e222": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "0a2f2be7": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "bff6e8cf": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "equivalent"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "6d455e1b": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "92e06205": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "chat": 2
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "48125e21": {
+      "verdicts": [
+        "simple-chat",
+        "equivalent",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 1,
+        "equivalent": 1,
+        "chat": 1
+      },
+      "final_verdict": "tie",
+      "confidence": "no_consensus"
+    },
+    "36fc9eb7": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "77aefad8": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "f96ca67a": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "f4d21d8d": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "7e85b001": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "409a0eaa": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "065201ce": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "1b92a29b": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "ef62fd27": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "ba4d4630": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "a9d7cc45": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "equivalent"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "equivalent": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "ba818973": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "5f9dbf31": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "532b0423": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "9d5fe1dc": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "7f3332c2": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "dd8b4c9f": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "ad98661e": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "3ae86952": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "7f439a44": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "3010da3d": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "13aa804b": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "bf6b098b": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "29baf721": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "91ec5c83": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "123e598e": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "chat": 1,
+        "simple-chat": 2
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "3b1d5753": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    },
+    "6f8f309e": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "b04a7f26": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "d50eddcc": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "7a37aeaa": {
+      "verdicts": [
+        "chat",
+        "chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 3
+      },
+      "final_verdict": "chat",
+      "confidence": "unanimous"
+    },
+    "7d5fb228": {
+      "verdicts": [
+        "simple-chat",
+        "chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 2,
+        "chat": 1
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "majority"
+    },
+    "d6d9eb63": {
+      "verdicts": [
+        "chat",
+        "simple-chat",
+        "chat"
+      ],
+      "verdict_counts": {
+        "chat": 2,
+        "simple-chat": 1
+      },
+      "final_verdict": "chat",
+      "confidence": "majority"
+    },
+    "2996909e": {
+      "verdicts": [
+        "simple-chat",
+        "simple-chat",
+        "simple-chat"
+      ],
+      "verdict_counts": {
+        "simple-chat": 3
+      },
+      "final_verdict": "simple-chat",
+      "confidence": "unanimous"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "subset_id": "a4ea6b00",
+  "original_session_id": "20250620_153226 f266e6",
+  "subset_description": "u1-a1-u2",
+  "subset_length": 3,
+  "created_at": "2025-06-20T16:12:01.234381",
+  "messages": [
+    {
+      "role": "user",
+      "message": "How does the copy-on-write mechanism improve the efficiency of fork() in Unix-based systems?",
+      "timestamp": "2025-06-20T15:32:29.581594"
+    },
+    {
+      "role": "assistant",
+      "message": "Okay, that's a great question! Let's break it down. Before we talk about copy-on-write, can you remind me what the `fork()` system call does in general? What is the main purpose of `fork()`?",
+      "timestamp": "2025-06-20T15:32:29.581603"
+    },
+    {
+      "role": "user",
+      "message": "Umm... does it create a new process?",
+      "timestamp": "2025-06-20T15:32:31.860422"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "CS freshman who questions their fit in computer science and struggles with confidence and direction",
+    "project_id": "68d02047-0f09-4b83-81f8-1c1d8867007a",
+    "student_traits": {
+      "goal_commitment": "low",
+      "motivation": "low",
+      "self_efficacy": "low"
+    },
+    "batch_session_number": 71,
+    "batch_id": "batch_20250620_153242"
+  }
+}

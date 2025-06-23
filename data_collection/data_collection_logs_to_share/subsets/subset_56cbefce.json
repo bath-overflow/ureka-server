@@ -1,0 +1,45 @@
+{
+  "subset_id": "56cbefce",
+  "original_session_id": "20250620_153342 8fde30",
+  "subset_description": "u1-a1-u2-a2-u3",
+  "subset_length": 5,
+  "created_at": "2025-06-20T16:12:01.234550",
+  "messages": [
+    {
+      "role": "user",
+      "message": "In what situations is a semaphore preferred over a mutex for inter-process synchronization?",
+      "timestamp": "2025-06-20T15:33:46.031212"
+    },
+    {
+      "role": "assistant",
+      "message": "Okay, that's a great question! To really understand when a semaphore is preferred, let's first think about the fundamental difference between a mutex and a semaphore.\n\nIn your own words, how would you describe the primary purpose of a mutex? What problem is it designed to solve?",
+      "timestamp": "2025-06-20T15:33:46.031218"
+    },
+    {
+      "role": "user",
+      "message": "Is a mutex basically a bouncer at a club, making sure only one person is inside at a time, while a semaphore is like a ticket dispenser, allowing a limited number of people in?",
+      "timestamp": "2025-06-20T15:33:50.482053"
+    },
+    {
+      "role": "assistant",
+      "message": "That's a fantastic analogy! The \"bouncer\" and \"ticket dispenser\" comparison is very helpful.\n\nSo, building on that, let's consider this: If the club owner (the operating system) only has a \"bouncer,\" what kind of control does the owner have over the *order* in which people enter the club, or how many *specific types* of people are allowed in? Could the bouncer be used to, say, prioritize VIP guests, or ensure that there's always a certain number of dancers inside? Why or why not?",
+      "timestamp": "2025-06-20T15:33:50.482059"
+    },
+    {
+      "role": "user",
+      "message": "So, are you saying that with just a mutex, it's first-come, first-served, and there's no way to give priority or manage specific groups of processes?",
+      "timestamp": "2025-06-20T15:33:53.746569"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "enthusiastic CS sophomore interested in CS but worried about competitiveness",
+    "project_id": "0f1cc158-2eb6-4460-92c7-e4a396b35379",
+    "student_traits": {
+      "goal_commitment": "low",
+      "motivation": "high",
+      "self_efficacy": "low"
+    },
+    "batch_session_number": 94,
+    "batch_id": "batch_20250620_153400"
+  }
+}

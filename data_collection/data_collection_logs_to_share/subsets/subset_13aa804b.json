@@ -1,0 +1,35 @@
+{
+  "subset_id": "13aa804b",
+  "original_session_id": "20250620_152955 f620a4",
+  "subset_description": "u1-a1-u2",
+  "subset_length": 3,
+  "created_at": "2025-06-20T16:12:01.234233",
+  "messages": [
+    {
+      "role": "user",
+      "message": "Why does increasing the page size in virtual memory lead to higher internal fragmentation, and how does it impact TLB effectiveness?",
+      "timestamp": "2025-06-20T15:29:59.052291"
+    },
+    {
+      "role": "assistant",
+      "message": "Okay, let's break this down. First, tell me, what is internal fragmentation in the context of virtual memory? Define it in your own words. I want to make sure we're on the same page before we connect it to page size.",
+      "timestamp": "2025-06-20T15:29:59.052298"
+    },
+    {
+      "role": "user",
+      "message": "Is it when a process gets allocated a page that is larger than the process actually needs, leading to wasted space within that page?",
+      "timestamp": "2025-06-20T15:30:01.940126"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "curious CS junior who excels at coding but avoids long-term goal setting",
+    "project_id": "db8fc5e4-eac0-42be-b84f-9454eebdd3c2",
+    "student_traits": {
+      "goal_commitment": "low",
+      "motivation": "high",
+      "self_efficacy": "high"
+    },
+    "batch_session_number": 26,
+    "batch_id": "batch_20250620_153011"
+  }
+}

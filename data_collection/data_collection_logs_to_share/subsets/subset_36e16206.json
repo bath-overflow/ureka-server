@@ -1,0 +1,55 @@
+{
+  "subset_id": "36e16206",
+  "original_session_id": "20250620_153017 9a219f",
+  "subset_description": "u1-a1-u2-a2-u3-a3-u4",
+  "subset_length": 7,
+  "created_at": "2025-06-20T16:12:01.234347",
+  "messages": [
+    {
+      "role": "user",
+      "message": "Why does quicksort have poor worst-case performance, and how do randomized pivots address this issue in practice?",
+      "timestamp": "2025-06-20T15:30:18.351562"
+    },
+    {
+      "role": "assistant",
+      "message": "Okay, that's a great question! Let's break it down. First, can you remind me what the worst-case scenario for quicksort is, and what kind of input would trigger it?",
+      "timestamp": "2025-06-20T15:30:18.351563"
+    },
+    {
+      "role": "user",
+      "message": "Um... I think it's when the pivot is always the smallest or largest element?",
+      "timestamp": "2025-06-20T15:30:21.995129"
+    },
+    {
+      "role": "assistant",
+      "message": "That's exactly right! And what kind of input data would consistently cause the pivot to be the smallest or largest element at each step? Think about the order of the elements in the input array.",
+      "timestamp": "2025-06-20T15:30:21.995136"
+    },
+    {
+      "role": "user",
+      "message": "Is it when the input is already sorted?",
+      "timestamp": "2025-06-20T15:30:27.056989"
+    },
+    {
+      "role": "assistant",
+      "message": "Yes, precisely! When the input array is already sorted (or reverse sorted), and you naively pick the first or last element as the pivot, you end up with the worst-case scenario.\n\nNow, can you explain *why* choosing the smallest or largest element as the pivot leads to poor performance? What happens to the size of the subproblems in each recursive call?",
+      "timestamp": "2025-06-20T15:30:27.056991"
+    },
+    {
+      "role": "user",
+      "message": "Does that mean the recursion depth becomes equal to the size of the input array?",
+      "timestamp": "2025-06-20T15:30:31.647726"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "CS senior who wants to succeed but feels overwhelmed and lacks confidence",
+    "project_id": "936220b5-f406-4723-8c2c-3075fbc71029",
+    "student_traits": {
+      "goal_commitment": "high",
+      "motivation": "low",
+      "self_efficacy": "low"
+    },
+    "batch_session_number": 33,
+    "batch_id": "batch_20250620_153032"
+  }
+}

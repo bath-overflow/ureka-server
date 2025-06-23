@@ -1,0 +1,25 @@
+{
+  "subset_id": "a289fd28",
+  "original_session_id": "20250620_152829 a3872a",
+  "subset_description": "u1",
+  "subset_length": 1,
+  "created_at": "2025-06-20T16:12:01.234274",
+  "messages": [
+    {
+      "role": "user",
+      "message": "Why can't Dijkstra's algorithm handle negative-weight edges, and how does the Bellman-Ford algorithm overcome this limitation?",
+      "timestamp": "2025-06-20T15:28:30.438935"
+    }
+  ],
+  "original_metadata": {
+    "student_persona": "technically skilled CS junior who can handle coursework but lacks engagement",
+    "project_id": "af68d2ff-f56c-450d-9ba4-d58c61037ffc",
+    "student_traits": {
+      "goal_commitment": "low",
+      "motivation": "low",
+      "self_efficacy": "high"
+    },
+    "batch_session_number": 4,
+    "batch_id": "batch_20250620_152847"
+  }
+}
