@@ -534,11 +534,83 @@ class SimpleChatGraphService(ChatGraphService):
 
         instruction = self.prompt_service.get_prompt("simple_teacher_prompt.txt")
 
+        print("AA")
+
         prompt = instruction.format(dialogue_history=history)
+
+        print("BB")
 
         response = llm.invoke([HumanMessage(content=prompt)])
 
+        print(f"CC: {response.content}")
+
         return {"messages": [response]}
+
+    async def stream_chat_response(
+        self, chat_id: str, user_message: str
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream responses from the AI.
+
+        Args:
+            chat_id: Identifier for the chat/collection
+            user_message: The message from the user. This is already written in the
+            chat history.
+
+        Yields:
+            Tokens from the AI response as they're generated
+        """
+        try:
+            # Prepare input for the graph
+            stream_input = {
+                "user_query": user_message,
+                "collection_name": chat_id,
+            }
+
+            # Buffer to accumulate tokens and detect "[Teacher]: " prefix
+            token_buffer = ""
+            prefix_detected = False
+            prefix_to_remove = "[Teacher]: "
+
+            # Stream the response from the graph with token-by-token streaming
+            current_node = None
+            async for chunk, metadata in self.graph.astream(
+                stream_input,
+                stream_mode="messages",  # Stream token by token
+            ):
+                current_node = metadata.get("langgraph_node")
+
+                # Only stream tokens from the generate_final_answer node
+                if current_node == "generate_final_answer" and isinstance(
+                    chunk, AIMessage
+                ):
+                    content = chunk.content
+                    if not isinstance(content, str):
+                        continue
+
+                    if not prefix_detected:
+                        # Buffer the content until we detect the prefix
+                        token_buffer += content
+
+                        # Check if buffer starts with the prefix
+                        if token_buffer.startswith(prefix_to_remove):
+                            # Remove the prefix and yield the remaining content
+                            remaining_content = token_buffer[len(prefix_to_remove) :]
+                            prefix_detected = True
+                            if remaining_content:
+                                yield remaining_content
+                        elif len(token_buffer) >= len(prefix_to_remove):
+                            # Buffer is long enough and doesn't start with prefix -> prefix doesn't exist
+                            prefix_detected = True
+                            yield token_buffer
+                    else:
+                        yield content
+
+        except Exception as e:
+            error_msg = f"Error in stream_chat_response: {str(e)}"
+            print(f"Error processing message for chat {chat_id}: {e}")
+            traceback.print_exc()
+            yield f"[ERROR: {error_msg}]"
 
 
 # Create a singleton instance for the simplified chat service
